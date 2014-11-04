@@ -1,0 +1,30 @@
+Registerzuteilung:
+
+A               r0b
+B               r1b
+C               r2b
+D               r3b
+E               r4b
+H               r5b
+L               r6b
+SP              r7w
+aMem            r8
+aState          r9
+temp1           r10(bw)
+temp2           r11(bw)
+temp3           r12(bw)
+(instCount)     r13
+
+Probleme:
+
+Core/Instruktionen
+Interrupts (VBLANK, Stat, Timer)
+Grafik
+Sound
+Speicherlayout
+Memory Banking
+Input
+separate Threads
+Tests
+Debugging
+Call Graph

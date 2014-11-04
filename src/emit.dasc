@@ -1,0 +1,283 @@
+#include "emit.h"
+
+#include "../dynasm/dasm_proto.h"
+#include "../dynasm/dasm_x86.h"
+
+#include <sys/mman.h>
+
+    |.arch x64
+
+    |.define    A,      r0b
+    |.define    xA,     r0
+    |.define    B,      r1b
+    |.define    xB,     r1
+    |.define    C,      r2b
+    |.define    xC,     r2
+    |.define    D,      r3b
+    |.define    xD,     r3
+    |.define    E,      r13b
+    |.define    xE,     r13
+    |.define    H,      r5b
+    |.define    xH,     r5
+    |.define    L,      r6b
+    |.define    xL,     r6
+    |.define    SP,     r7w
+    |.define    xSP,    r7
+    |.define    aMem,   r8
+    |.define    aState, r9
+    |.define    tmp1,   r10
+    |.define    tmp1b,  r10b
+    |.define    tmp1w,  r10w
+    |.define    tmp2,   r11
+    |.define    tmp2b,  r11b
+    |.define    tmp2w,  r11w
+    |.define    tmp3,   r12
+    |.define    tmp3b,  r12b
+    |.define    tmp3w,  r12w
+    |.define    rArg1,  rdi
+    |.define    rArg2,  rsi
+    |.define    rRet,   rax
+
+    |.type state, gb_state, aState
+
+    |.include dasm_macros.h
+
+bool inst_nop(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+    | print "NOP"
+    *cycles += inst->cycles;
+    return true;
+}
+
+bool inst_jp(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+    | print "JP"
+    
+    switch(inst->op1) {
+    case NONE:
+        break;
+    case CC_NZ:
+        | jz >1
+        break;
+    case CC_Z:
+        | jnz >1
+        break;
+    case CC_NC:
+        | jc >1
+        break;
+    case CC_C:
+        | jnc >1
+        break;
+    default:
+        printf("Invalid 1st operand to JP\n");
+        return false;
+    }
+
+    | mov qword state->inst_count, *cycles + inst->cycles;
+
+    switch(inst->op2) {
+    case IMM16:    
+        | return inst->args[2]*256 + inst->args[1]
+        break;
+    case MEM_HL:
+        | mov tmp1, xH
+        | shl tmp1, 8
+        | add tmp1, xL
+        | return tmp1
+        break;
+    default:
+        printf("Invalid 2nd operand to JP\n");
+        return false;
+    }
+
+    if(inst->op1 != NONE) {
+        | 1:
+    }
+    
+    *cycles += inst->alt_cycles;
+    
+    return true;
+}
+
+bool inst_ld16(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+    | print "LD16"
+    switch(inst->op1) {
+    case REG_BC:
+        if(inst->op2 == IMM16) {
+            | mov B, inst->args[2];
+            | mov C, inst->args[1];
+        } else {
+            printf("Invalid 2nd operand to LD16\n");
+            return false;
+        }
+        break;
+    case REG_DE:
+        if(inst->op2 == IMM16) {
+            | mov D, inst->args[2];
+            | mov E, inst->args[1];
+        } else {
+            printf("Invalid 2nd operand to LD16\n");
+            return false;
+        }
+        break;
+    case REG_HL:
+        if(inst->op2 == IMM16) {
+            | mov H, inst->args[2];
+            | mov L, inst->args[1];
+        } else {
+            printf("Invalid 2nd operand to LD16\n");
+            return false;
+        }
+        break;
+    case REG_SP:
+        if(inst->op2 == IMM16) {
+            | mov SP, inst->args[1];
+        } else {
+            printf("Invalid 2nd operand to LD16\n");
+            return false;
+        }
+        break;
+    default:
+        printf("Invalid 1st operand to LD16\n");
+        return false;
+    }
+    *cycles += inst->alt_cycles;
+    return true;
+}
+
+bool inst_ld(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+    | print "LD"
+	| inst mov, inst->op1, inst->op2
+    *cycles += inst->cycles;
+    return true;
+}
+
+bool inst_dec(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+    | print "DEC"
+    switch(inst->op1) {
+    case REG_A:
+        | dec A
+        break;
+    case REG_B:
+        | dec B
+        break;
+    case REG_C:
+        | dec C
+        break;
+    case REG_D:
+        | dec D
+        break;
+    case REG_E:
+        | dec E
+        break;
+    case REG_H:
+        | dec H
+        break;
+    case REG_L:
+        | dec L
+        break;
+    default:
+        printf("Invalid operand to DEC\n");
+        return false;
+    }
+    *cycles += inst->cycles;
+    return true;
+}
+
+bool inst_xor(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+    | print "XOR"
+	| inst xor, inst->op1, inst->op2
+    *cycles += inst->cycles;
+    return true;
+}
+
+bool emit(gb_block *block, gb_instruction *inst, int n) {
+    dasm_State* d;
+    uint32_t npc = 4;
+    uint32_t nextpc = 0;
+    uint64_t cycles = 0;
+
+    |.section code
+    dasm_init(&d, DASM_MAXSECTION);
+
+    |.globals lbl_
+    void* labels[lbl__MAX];
+    dasm_setupglobal(&d, labels, lbl__MAX);
+
+    |.actionlist gb_actions
+    dasm_setup(&d, gb_actions);
+
+    dasm_growpc(&d, npc);
+
+	dasm_State** Dst = &d;
+	|.code
+	|->f_start:
+    | prologue
+
+    for(int i = 0; i <= n; ++i) {
+        switch(inst[i].opcode) {
+        case NOP:
+            if(!inst_nop(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
+        case LD16:
+            if(!inst_ld16(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
+        case LD:
+            if(!inst_ld(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
+        case DEC:
+            if(!inst_dec(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
+        case JP:
+            if(!inst_jp(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
+        case XOR:
+            if(!inst_xor(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
+        default:
+            printf("unrecognized opcode (%i)\n", inst[i].opcode);
+            goto exit_fail;
+        }
+    }
+
+    | mov qword state->inst_count, cycles
+    | return 0
+
+    size_t sz;
+    if(dasm_link(&d, &sz) != 0) {
+        printf("dasm_link failed\n");
+        goto exit_fail;
+    }
+        
+    void *buf = mmap(0, sz, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if(!buf) {
+        printf("could not allocate memory for function\n");
+        goto exit_fail;
+    }
+    
+    if(dasm_encode(&d, buf) != 0) {
+        printf("dynasm_encode failed\n");
+        goto exit_fail;
+    }
+    
+    if(mprotect(buf, sz, PROT_READ | PROT_EXEC) != 0) {
+        printf("could not make compiled function executable\n");
+        goto exit_fail;
+    }
+
+    block->func = labels[lbl_f_start];
+
+	dasm_free(&d);
+
+    printf("compilation successful!\n");
+
+    return true;
+    
+exit_fail:
+	dasm_free(&d);
+    return false;
+}
