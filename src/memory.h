@@ -13,7 +13,7 @@ typedef struct {
 } gb_memory;
 
 // emulate write through mbc
-void gb_memory_write(gb_memory *mem, uint16_t addr, uint8_t value);
+void gb_memory_write(gb_memory *mem, uint64_t addr, uint64_t value);
 
 // initialize memory layout and map file filename
 bool gb_memory_init(gb_memory *mem, const char *filename);

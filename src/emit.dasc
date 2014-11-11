@@ -36,6 +36,7 @@
     |.define    tmp3w,  r12w
     |.define    rArg1,  rdi
     |.define    rArg2,  rsi
+    |.define    rArg3,  rdx
     |.define    rRet,   rax
 
     |.type state, gb_state, aState
@@ -49,7 +50,7 @@ bool inst_nop(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 }
 
 bool inst_jp(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
-    | print "JP"
+    | print "JP/CALL"
     
     switch(inst->op1) {
     case NONE:
@@ -67,13 +68,23 @@ bool inst_jp(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
         | jnc >1
         break;
     default:
-        printf("Invalid 1st operand to JP\n");
+        printf("Invalid 1st operand to JP/CALL\n");
         return false;
     }
 
-    | mov qword state->inst_count, *cycles + inst->cycles;
+    if(inst->opcode == CALL) {
+        | and xSP, 0xffff
+	    | mov word [aMem+xSP], (uint16_t)(inst->address + inst->bytes)
+	    | dec SP
+	    | dec SP
+    }
+
+    | add qword state->inst_count, *cycles + inst->cycles;
 
     switch(inst->op2) {
+	case IMM8:
+		| return inst->address + (int8_t)inst->args[1] + 2
+		break;
     case IMM16:    
         | return inst->args[2]*256 + inst->args[1]
         break;
@@ -84,9 +95,49 @@ bool inst_jp(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
         | return tmp1
         break;
     default:
-        printf("Invalid 2nd operand to JP\n");
+        printf("Invalid 2nd operand to JP/CALL\n");
         return false;
     }
+
+    if(inst->op1 != NONE) {
+        | 1:
+    }
+    
+    *cycles += inst->alt_cycles;
+    
+    return true;
+}
+
+bool inst_ret(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+    | print "RET"
+    
+    switch(inst->op1) {
+    case NONE:
+        break;
+    case CC_NZ:
+        | jz >1
+        break;
+    case CC_Z:
+        | jnz >1
+        break;
+    case CC_NC:
+        | jc >1
+        break;
+    case CC_C:
+        | jnc >1
+        break;
+    default:
+        printf("Invalid 1st operand to RET\n");
+        return false;
+    }
+
+    | add qword state->inst_count, *cycles + inst->cycles;
+    | inc SP
+    | inc SP
+    | and xSP, 0xffff
+    | mov tmp1, [aMem+xSP]
+    | and tmp1, 0xffff
+    | return tmp1
 
     if(inst->op1 != NONE) {
         | 1:
@@ -129,7 +180,7 @@ bool inst_ld16(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
         break;
     case REG_SP:
         if(inst->op2 == IMM16) {
-            | mov SP, inst->args[1];
+            | mov SP, (uint16_t)(inst->args[1] + 256*inst->args[2]);
         } else {
             printf("Invalid 2nd operand to LD16\n");
             return false;
@@ -150,34 +201,88 @@ bool inst_ld(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     return true;
 }
 
+bool inst_inc(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+    | print "INC"
+    | inst1 inc, inst->op1
+    *cycles += inst->cycles;
+    return true;
+}
+
 bool inst_dec(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | print "DEC"
+    | inst1 dec, inst->op1
+    *cycles += inst->cycles;
+    return true;
+}
+
+bool inst_dec16(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+    | print "DEC16"
     switch(inst->op1) {
-    case REG_A:
-        | dec A
+    case REG_BC:
+        | mov tmp2, xB
+        | shl tmp2, 8
+        | mov tmp1, xC
+        | add tmp1, tmp2
+        | dec tmp1
+        | mov C, tmp1b
+        | shr tmp1, 8
+        | mov B, tmp1b
         break;
-    case REG_B:
-        | dec B
+    case REG_DE:
+        | mov tmp2, xD
+        | shl tmp2, 8
+        | mov tmp1, xE
+        | add tmp1, tmp2
+        | dec tmp1
+        | mov E, tmp1b
+        | shr tmp1, 8
+        | mov D, tmp1b
         break;
-    case REG_C:
-        | dec C
+    case REG_HL:
+        | mov tmp2, xH
+        | shl tmp2, 8
+        | mov tmp1, xL
+        | add tmp1, tmp2
+        | dec tmp1
+        | mov L, tmp1b
+        | shr tmp1, 8
+        | mov H, tmp1b
         break;
-    case REG_D:
-        | dec D
-        break;
-    case REG_E:
-        | dec E
-        break;
-    case REG_H:
-        | dec H
-        break;
-    case REG_L:
-        | dec L
+    case REG_SP:
+        | dec SP
         break;
     default:
-        printf("Invalid operand to DEC\n");
+        printf("Invalid operand to DEC16\n");
         return false;
     }
+    *cycles += inst->cycles;
+    return true;
+}
+
+bool inst_di(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+	| print "DI"
+	| mov byte state->ime, 0
+    *cycles += inst->cycles;
+	return true;
+}
+
+bool inst_ei(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+	| print "EI"
+	| mov byte state->ime, 1
+    *cycles += inst->cycles;
+	return true;
+}
+
+bool inst_cp(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+    | print "CP"
+	| inst cmp, inst->op1, inst->op2
+    *cycles += inst->cycles;
+    return true;
+}
+
+bool inst_or(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+    | print "OR"
+	| inst or, inst->op1, inst->op2
     *cycles += inst->cycles;
     return true;
 }
@@ -226,16 +331,46 @@ bool emit(gb_block *block, gb_instruction *inst, int n) {
             if(!inst_ld(Dst, &inst[i], &cycles))
                 goto exit_fail;
             break;
+        case INC:
+            if(!inst_inc(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
+        case DEC16:
+            if(!inst_dec16(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
         case DEC:
             if(!inst_dec(Dst, &inst[i], &cycles))
                 goto exit_fail;
             break;
         case JP:
+		case JR:
+        case CALL:
             if(!inst_jp(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
+		case DI:
+			if(!inst_di(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
+		case EI:
+			if(!inst_ei(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
+		case CP:
+	        if(!inst_cp(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
+        case OR:
+            if(!inst_or(Dst, &inst[i], &cycles))
                 goto exit_fail;
             break;
         case XOR:
             if(!inst_xor(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
+        case RET:
+            if(!inst_ret(Dst, &inst[i], &cycles))
                 goto exit_fail;
             break;
         default:
@@ -244,7 +379,7 @@ bool emit(gb_block *block, gb_instruction *inst, int n) {
         }
     }
 
-    | mov qword state->inst_count, cycles
+    | add qword state->inst_count, cycles
     | return 0
 
     size_t sz;

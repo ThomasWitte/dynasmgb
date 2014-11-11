@@ -1,3 +1,32 @@
+|.macro write_byte, addr, value
+    | pushfq
+	| push r0
+	| push r1
+	| push r2
+	| push r6
+	| push r7
+	| push r8
+	| push r9
+	| push r10
+	| push r11
+	| mov rArg1, state->mem
+    | mov rArg2, addr
+    | mov rArg3, value
+	| mov rax, &gb_memory_write
+	| call rax
+	| .nop 1
+	| pop r11
+	| pop r10
+	| pop r9
+	| pop r8
+	| pop r7
+	| pop r6
+	| pop r2
+	| pop r1
+	| pop r0
+	| popfq
+|.endmacro
+
 |.macro print, text
     | pushfq
 	| push r0
@@ -11,6 +40,37 @@
 	| push r11
 	| mov rArg1, text
 	| mov rax, &puts
+	| call rax
+	| .nop 1
+	| pop r11
+	| pop r10
+	| pop r9
+	| pop r8
+	| pop r7
+	| pop r6
+	| pop r2
+	| pop r1
+	| pop r0
+	| popfq
+|.endmacro
+
+void printnum(uint64_t addr) {
+    printf("Debug: %#lx\n", addr);
+}
+
+|.macro debug_a64, addr
+    | pushfq
+	| push r0
+	| push r1
+	| push r2
+	| push r6
+	| push r7
+	| push r8
+	| push r9
+	| push r10
+	| push r11
+	| mov rArg1, addr
+	| mov rax, &printnum
 	| call rax
 	| .nop 1
 	| pop r11
@@ -50,9 +110,8 @@
     | mov L, state->l
     | mov xSP, 0
     | mov SP, state->_sp
-// HACK: mem.mem funktioniert nicht, deshalb nur mem in der Hoffnung, dass es
-//       das erste Element der Struktur ist.
-	| mov aMem, state->mem
+	| mov tmp1, state->mem
+    | mov aMem, [tmp1 + offsetof(gb_memory, mem)]
 |.endmacro
 	
 |.macro return, addr
@@ -73,6 +132,35 @@
     | pop rbx
     | mov rRet, addr
 	| ret
+|.endmacro
+
+|.macro inst1, opcode, op1
+    || switch(op1) {
+    || case REG_A:
+    |      opcode A
+    ||     break;
+    || case REG_B:
+    |      opcode B
+    ||     break;
+    || case REG_C:
+    |      opcode C
+    ||     break;
+    || case REG_D:
+    |      opcode D
+    ||     break;
+    || case REG_E:
+    |      opcode E
+    ||     break;
+    || case REG_H:
+    |      opcode H
+    ||     break;
+    || case REG_L:
+    |      opcode L
+    ||     break;
+    || default:
+    ||     printf("Invalid operand to opcode\n");
+    ||     return false;
+    || }
 |.endmacro
 
 |.macro inst, opcode, op1, op2
@@ -103,8 +191,19 @@
     ||     case IMM8:
     |          opcode A, inst->args[1]
     ||         break;
+    ||     case MEM_8:
+    |          opcode A, [aMem + (0xff00+inst->args[1])]
+    ||         break;
+    ||     case MEM_HL:
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |          opcode A, [aMem + tmp1]
+    ||         break;
     ||     case MEM_DEC_HL:
-// TODO: load through mbc
     |          and xL, 0xff
     |          and xH, 0xff
     |          mov tmp2, xH
@@ -117,8 +216,21 @@
     |          shr tmp1, 8
     |          mov H, tmp1b
     ||         break;
+    ||     case MEM_INC_HL:
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |          opcode A, [aMem+tmp1]
+    |          inc tmp1
+    |          mov L, tmp1b
+    |          shr tmp1, 8
+    |          mov H, tmp1b
+    ||         break;
     ||     default:
-    ||         printf("Unsupported operand op2=%i\n", op2);
+    ||         printf("Unsupported operand op2=%i to opcode\n", op2);
     ||         return false;
     ||     }
     ||     break;
@@ -145,11 +257,20 @@
     ||     case REG_L:
     |          opcode B, L
     ||         break;
+    ||     case MEM_HL:
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |          opcode B, [aMem + tmp1]
+    ||         break;
     ||     case IMM8:
     |          opcode B, inst->args[1]
     ||         break;
     ||     default:
-    ||         printf("Unsupported operand op2=%i\n", op2);
+    ||         printf("Unsupported operand op2=%i to opcode\n", op2);
     ||         return false;
     ||     }
     ||     break;
@@ -176,11 +297,20 @@
     ||     case REG_L:
     |          opcode C, L
     ||         break;
+    ||     case MEM_HL:
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |          opcode C, [aMem + tmp1]
+    ||         break;
     ||     case IMM8:
     |          opcode C, inst->args[1]
     ||         break;
     ||     default:
-    ||         printf("Unsupported operand op2=%i\n", op2);
+    ||         printf("Unsupported operand op2=%i to opcode\n", op2);
     ||         return false;
     ||     }
     ||     break;
@@ -207,11 +337,20 @@
     ||     case REG_L:
     |          opcode D, L
     ||         break;
+    ||     case MEM_HL:
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |          opcode D, [aMem + tmp1]
+    ||         break;
     ||     case IMM8:
     |          opcode D, inst->args[1]
     ||         break;
     ||     default:
-    ||         printf("Unsupported operand op2=%i\n", op2);
+    ||         printf("Unsupported operand op2=%i to opcode\n", op2);
     ||         return false;
     ||     }
     ||     break;
@@ -238,11 +377,20 @@
     ||     case REG_L:
     |          opcode E, L
     ||         break;
+    ||     case MEM_HL:
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |          opcode E, [aMem + tmp1]
+    ||         break;
     ||     case IMM8:
     |          opcode E, inst->args[1]
     ||         break;
     ||     default:
-    ||         printf("Unsupported operand op2=%i\n", op2);
+    ||         printf("Unsupported operand op2=%i to opcode\n", op2);
     ||         return false;
     ||     }
     ||     break;
@@ -269,11 +417,20 @@
     ||     case REG_L:
     |          opcode H, L
     ||         break;
+    ||     case MEM_HL:
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |          opcode H, [aMem + tmp1]
+    ||         break;
     ||     case IMM8:
     |          opcode H, inst->args[1]
     ||         break;
     ||     default:
-    ||         printf("Unsupported operand op2=%i\n", op2);
+    ||         printf("Unsupported operand op2=%i to opcode\n", op2);
     ||         return false;
     ||     }
     ||     break;
@@ -300,11 +457,131 @@
     ||     case REG_L:
     |          opcode L, L
     ||         break;
+    ||     case MEM_HL:
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |          opcode L, [aMem + tmp1]
+    ||         break;
     ||     case IMM8:
     |          opcode L, inst->args[1]
     ||         break;
     ||     default:
-    ||         printf("Unsupported operand op2=%i\n", op2);
+    ||         printf("Unsupported operand op2=%i to opcode\n", op2);
+    ||         return false;
+    ||     }
+    ||     break;
+    || case MEM_HL:
+    ||     switch(op2) {
+    ||     case REG_A:
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |.if 'opcode' == 'mov'
+    |          write_byte tmp1, xA
+    |.else
+    |          opcode [aMem + tmp1], A
+    |.endif    
+    ||         break;
+    ||     case REG_B:
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |.if 'opcode' == 'mov'
+    |          write_byte tmp1, xB
+    |.else
+    |          opcode [aMem + tmp1], B
+    |.endif    
+    ||         break;
+    ||     case REG_C:
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |.if 'opcode' == 'mov'
+    |          write_byte tmp1, xC
+    |.else
+    |          opcode [aMem + tmp1], C
+    |.endif    
+    ||         break;
+    ||     case REG_D:
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |.if 'opcode' == 'mov'
+    |          write_byte tmp1, xD
+    |.else
+    |          opcode [aMem + tmp1], D
+    |.endif    
+    ||         break;
+    ||     case REG_E:
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |.if 'opcode' == 'mov'
+    |          write_byte tmp1, xE
+    |.else
+    |          opcode [aMem + tmp1], E
+    |.endif    
+    ||         break;
+    ||     case REG_H:
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |.if 'opcode' == 'mov'
+    |          write_byte tmp1, xH
+    |.else
+    |          opcode [aMem + tmp1], H
+    |.endif    
+    ||         break;
+    ||     case REG_L:
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |.if 'opcode' == 'mov'
+    |          write_byte tmp1, xL
+    |.else
+    |          opcode [aMem + tmp1], L
+    |.endif    
+    ||         break;
+    ||     case IMM8:
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |.if 'opcode' == 'mov'
+    |          write_byte tmp1, inst->args[1]
+    |.else
+    |          opcode byte [aMem + tmp1], inst->args[1]
+    |.endif    
+    ||         break;
+    ||     default:
+    ||         printf("Unsupported operand op2=%i to opcode\n", op2);
     ||         return false;
     ||     }
     ||     break;
@@ -317,18 +594,65 @@
     |          shl tmp2, 8
     |          mov tmp1, xL
     |          add tmp1, tmp2
-    |          opcode A, [aMem+tmp1]
+    |          write_byte tmp1, inst->args[1]
     |          dec tmp1
     |          mov L, tmp1b
     |          shr tmp1, 8
     |          mov H, tmp1b
     ||     } else {
-    ||         printf("Unsupported operand op2=%i\n", op2);
+    ||         printf("Unsupported operand op2=%i to opcode\n", op2);
+    ||         return false;
+    ||     }
+    ||     break;
+    || case MEM_INC_HL:
+// TODO: load through mbc
+    ||     if(op2 == REG_A) {
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp1, xL
+    |          add tmp1, tmp2
+    |          write_byte tmp1, inst->args[1]
+    |          inc tmp1
+    |          mov L, tmp1b
+    |          shr tmp1, 8
+    |          mov H, tmp1b
+    ||     } else {
+    ||         printf("Unsupported operand op2=%i to opcode\n", op2);
+    ||         return false;
+    ||     }
+    ||     break;
+    || case MEM_8:
+    ||     if(op2 == REG_A) {
+    |          opcode [aMem + (0xff00+inst->args[1])], A
+    ||     } else {
+    ||         printf("Unsupported operand op2=%i to opcode\n", op2);
+    ||         return false;
+    ||     }
+    ||     break;
+    || case MEM_C:
+    ||     if(op2 == REG_A) {
+    |          and xC, 0xff;
+    |          opcode byte [aMem + xC + 0xff00], A
+    ||     } else {
+    ||         printf("Unsupported operand op2=%i to opcode\n", op2);
+    ||         return false;
+    ||     }
+    ||     break;
+    || case MEM_16:
+    ||     if(op2 == REG_A) {
+// TODO: implement static memory check at compile time
+    ||         uint16_t addr = inst->args[2]*256+inst->args[1];
+    |          debug_a64 addr
+    |          write_byte addr, xA
+    ||     } else {
+    ||         printf("Unsupported operand op2=%i to opcode\n", op2);
     ||         return false;
     ||     }
     ||     break;
     || default:
-    ||     printf("Unsupported operand op1=%i\n", op1);
+    ||     printf("Unsupported operand op1=%i to opcode\n", op1);
     ||     return false;
     || }
 |.endmacro

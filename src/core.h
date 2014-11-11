@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include "memory.h"
 #include "instructions.h"
+#include "interrupt.h"
 
 typedef struct {
     gb_state state;

@@ -7,7 +7,15 @@
 #include "memory.h"
 
 // emulate write through mbc
-void gb_memory_write(gb_memory *mem, uint16_t addr, uint8_t value) {
+void gb_memory_write(gb_memory *mem, uint64_t addr, uint64_t value) {
+    addr &= 0xffff;
+    value &= 0xff;
+    if(addr < 0x8000) {
+        printf("write to rom @address %#lx\n", addr);    
+    } else {
+        printf("Memory write to %#lx, value is %#lx\n", addr, value);
+        mem->mem[addr] = value;
+    }
 }
 
 // initialize memory layout and map file filename
@@ -45,10 +53,12 @@ bool gb_memory_init(gb_memory *mem, const char *filename) {
 
 // change rom bank to bank if supported
 bool gb_memory_change_rom_bank(gb_memory *mem, int bank) {
+    return false;
 }
 
 // change ram bank to bank if supported
 bool gb_memory_change_ram_bank(gb_memory *mem, int bank) {
+    return false;
 }
 
 // free memory again
@@ -70,4 +80,5 @@ void print_header_info(gb_memory *mem) {
     printf("Cartridge Type: %#2x\n", mem->mem[0x147]);
     printf("ROM Size: %i kByte\n", 32 << mem->mem[0x148]);
     printf("RAM Size: %i kByte\n", mem->mem[0x149] > 0 ? 1 << (mem->mem[0x149]*2-1) : 0);
+	printf("==================================================\n");
 }

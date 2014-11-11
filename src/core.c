@@ -67,6 +67,7 @@ bool init_vm(gb_vm *vm, const char *filename) {
 
 bool run_vm(gb_vm *vm) {
     // check interrupts
+    update_ioregs(&vm->state, &vm->memory);
     
     // compile next block / get cached block
     if(vm->state.pc < 0x4000) { // first block
@@ -74,6 +75,8 @@ bool run_vm(gb_vm *vm) {
             if(!compile(&vm->compiled_blocks[0][vm->state.pc], &vm->memory, vm->state.pc))
                 goto compile_error;
         }
+        printf("execute function @%#x (count %i)\n", vm->state.pc,
+               vm->compiled_blocks[0][vm->state.pc].exec_count);
         vm->compiled_blocks[0][vm->state.pc].exec_count++;
         vm->state.pc = vm->compiled_blocks[0][vm->state.pc].func(&vm->state);
     } else if(vm->state.pc < 0x8000) { // execute function in rom
@@ -82,16 +85,23 @@ bool run_vm(gb_vm *vm) {
             if(!compile(&vm->compiled_blocks[bank][vm->state.pc-0x4000], &vm->memory, vm->state.pc))
                 goto compile_error;
         }
+        printf("execute function @%#x (count %i)\n", vm->state.pc,
+               vm->compiled_blocks[bank][vm->state.pc-0x4000].exec_count);
         vm->compiled_blocks[bank][vm->state.pc-0x4000].exec_count++;
         vm->state.pc = vm->compiled_blocks[bank][vm->state.pc-0x4000].func(&vm->state);
     } else { // execute function in ram
         gb_block temp = {0};
         if(!compile(&temp, &vm->memory, vm->state.pc))
             goto compile_error;
+        printf("execute function in ram\n");
         vm->state.pc = temp.func(&vm->state);
         free_block(&temp);
     }
     
+    printf("ioregs: LY=%02x\n", vm->memory.mem[0xff44]);
+    printf("register: A=%02x, BC=%02x%02x, DE=%02x%02x, HL=%02x%02x, SP=%04x\n",
+           vm->state.a, vm->state.b, vm->state.c, vm->state.d, vm->state.e,
+           vm->state.h, vm->state.l, vm->state._sp);
     printf("next address: %#x\n", vm->state.pc);
     
     return true;

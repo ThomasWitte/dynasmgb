@@ -12,14 +12,15 @@ typedef struct {
           SUB, SBC, AND, XOR, OR, CP, RET, POP, JP, CALL /*= 30*/,
           PUSH, RST, RETI, DI, EI, SLA, SRA, SWAP, SRL, BIT /*= 40*/,
           RES, SET, ERROR} opcode;
-    enum {NONE, REG_A, REG_B, REG_C, REG_D, REG_E, REG_H, REG_L,
-          REG_AF, REG_BC, REG_DE, REG_HL, REG_SP, IMM8, IMM16,
-          MEM_BC, MEM_DE, MEM_HL, MEM_16, MEM_8, MEM_C, MEM_INC_HL, MEM_DEC_HL,
+    enum {NONE, REG_A, REG_B, REG_C, REG_D, REG_E, REG_H, REG_L /*=7*/,
+          REG_AF, REG_BC, REG_DE, REG_HL, REG_SP, IMM8, IMM16 /*=14*/,
+          MEM_BC, MEM_DE, MEM_HL, MEM_16, MEM_8, MEM_C, MEM_INC_HL, MEM_DEC_HL /*=22*/,
           CC_Z, CC_C, CC_NZ, CC_NC,
           MEM_0x00, MEM_0x08, MEM_0x10, MEM_0x18, MEM_0x20, MEM_0x28, MEM_0x30, MEM_0x38,
           BIT_0, BIT_1, BIT_2, BIT_3, BIT_4, BIT_5, BIT_6, BIT_7
          } op1, op2;
     uint8_t *args;
+	uint16_t address;
     uint8_t bytes;
     uint8_t cycles, alt_cycles;
     enum {INST_FLAG_NONE            = 0x00,
