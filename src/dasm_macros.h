@@ -9,7 +9,7 @@
 	| push r9
 	| push r10
 	| push r11
-	| mov rArg1, state->mem
+	| mov rArg1, state
     | mov rArg2, addr
     | mov rArg3, value
 	| mov rax, &gb_memory_write
@@ -244,12 +244,7 @@ void printnum(uint64_t addr) {
     |          opcode A, inst->args[1]
     ||         break;
     ||     case MEM_8:
-// TODO: implement handling keypresses
-    ||         if(inst->args[1] == 0x00) {
-    |              opcode A, 0x0f
-    ||         } else {
-    |              opcode A, [aMem + (0xff00+inst->args[1])]
-    ||         }
+    |          opcode A, [aMem + (0xff00+inst->args[1])]
     ||         break;
     ||     case MEM_HL:
     |          and xL, 0xff

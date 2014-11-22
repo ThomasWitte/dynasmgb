@@ -71,8 +71,62 @@ int main(int argc, char *argv[]) {
 
         while(SDL_PollEvent(&evt)) {
             switch(evt.type) {
+            case SDL_KEYUP:
+                switch(evt.key.keysym.sym) {
+                case SDLK_a:
+                    vm.state.keys.state &= ~GB_KEY_A;
+                    break;
+                case SDLK_b:
+                    vm.state.keys.state &= ~GB_KEY_B;
+                    break;
+                case SDLK_UP:
+                    vm.state.keys.state &= ~GB_KEY_UP;
+                    break;
+                case SDLK_DOWN:
+                    vm.state.keys.state &= ~GB_KEY_DOWN;
+                    break;
+                case SDLK_LEFT:
+                    vm.state.keys.state &= ~GB_KEY_LEFT;
+                    break;
+                case SDLK_RIGHT:
+                    vm.state.keys.state &= ~GB_KEY_RIGHT;
+                    break;
+                case SDLK_y: // start button
+                    vm.state.keys.state &= ~GB_KEY_START;
+                    break;
+                case SDLK_x: // select button
+                    vm.state.keys.state &= ~GB_KEY_SELECT;
+                    break;
+                default:
+                    break;
+                }
+                break;
             case SDL_KEYDOWN:
                 switch(evt.key.keysym.sym) {
+                case SDLK_a:
+                    vm.state.keys.state |= GB_KEY_A;
+                    break;
+                case SDLK_b:
+                    vm.state.keys.state |= GB_KEY_B;
+                    break;
+                case SDLK_UP:
+                    vm.state.keys.state |= GB_KEY_UP;
+                    break;
+                case SDLK_DOWN:
+                    vm.state.keys.state |= GB_KEY_DOWN;
+                    break;
+                case SDLK_LEFT:
+                    vm.state.keys.state |= GB_KEY_LEFT;
+                    break;
+                case SDLK_RIGHT:
+                    vm.state.keys.state |= GB_KEY_RIGHT;
+                    break;
+                case SDLK_y: // start button
+                    vm.state.keys.state |= GB_KEY_START;
+                    break;
+                case SDLK_x: // select button
+                    vm.state.keys.state |= GB_KEY_SELECT;
+                    break;
                 case SDLK_d: // enter debugging
                     if(debug_mode) {
                         debug_mode = false;

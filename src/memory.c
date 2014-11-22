@@ -6,24 +6,40 @@
 #include <string.h>
 #include "memory.h"
 
+uint8_t get_joypad_state(gb_keys *keys, uint8_t value) {
+    uint8_t result = 0;
+    if(value & ~0x10) {
+        result |= keys->state & 0x0f;
+    }
+    if(value & ~0x20) {
+        result |= (keys->state >> 4);
+    }
+    return ~result;
+}
+
 // emulate write through mbc
-void gb_memory_write(gb_memory *mem, uint64_t addr, uint64_t value) {
+void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
     addr &= 0xffff;
     value &= 0xff;
+
+    uint8_t *mem = state->mem->mem;
 
     if(addr < 0x8000) {
         LOG_DEBUG("write to rom @address %#lx\n", addr);
     } else if(addr == 0xff05) {
         LOG_DEBUG("Memory write to %#lx, reset to 0\n", addr);
-        mem->mem[addr] = 0;
+        mem[addr] = 0;
+    } else if(addr == 0xff00) { // check for keypresses
+        LOG_DEBUG("Reading joypad state\n");
+        mem[addr] = get_joypad_state(&state->keys, value);
     } else if(addr == 0xff46) { // DMA Transfer to OAM RAM
         // TODO: Sprünge in den RAM detektieren und DMA optimieren
         LOG_DEBUG("DMA Transfer started.\n");
-        mem->mem[addr] = value;
-        memcpy(&mem->mem[0xfe00], &mem->mem[value << 8], 0xa0);
+        mem[addr] = value;
+        memcpy(&mem[0xfe00], &mem[value << 8], 0xa0);
     } else {
         LOG_DEBUG("Memory write to %#lx, value is %#lx\n", addr, value);
-        mem->mem[addr] = value;
+        mem[addr] = value;
     }
 }
 

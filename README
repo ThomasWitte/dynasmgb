@@ -3,6 +3,24 @@
 libsdl2 und lua + lua-bitop werden zum Bauen benötigt. Derzeit wird nur Linux
 unter x86-64 untersützt. Zum Bauen ./build.sh ausführen.
 
-= Debugging =
+= Argumente =
 
-d startet/beendet den Debug-Modus, s steppt jeweils zum nächsten Block.
+usage: ./dynasmgb [-b BREAKPOINT] file.gb
+
+BREAKPOINT ist eine Hexadezimale 16bit Adresse, der Debugmodus startet, sobald
+sie angesprungen (!) wird.
+
+file.gb ist ein Gameboy ROM; derzeit startet nur Tetris
+
+= Tastenblegung =
+
+ESC     Programm beenden
+d       Debugmodus starten/beenden
+s       (im Debugmodus) zum nächsten Block springen
+n       (im Debugmodus) zum nächsten VBLANK-Interrupt (= nächster Frame) springen
+
+a       A
+b       B
+y       Start
+x       Select
+Pfeil   entsprechende Richtung
