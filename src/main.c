@@ -22,11 +22,11 @@ void sig_segv_handler(int sig, siginfo_t *si, void *unused) {
 
 int main(int argc, char *argv[]) {
 
-//    struct sigaction sa;
-//    sa.sa_flags = SA_SIGINFO;
-//    sigemptyset(&sa.sa_mask);
-//    sa.sa_sigaction = sig_segv_handler;
-//    sigaction(SIGSEGV, &sa, NULL);
+    struct sigaction sa;
+    sa.sa_flags = SA_SIGINFO;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_sigaction = sig_segv_handler;
+    sigaction(SIGSEGV, &sa, NULL);
 
     // check arguments
     if(argc < 2) {
@@ -50,6 +50,11 @@ int main(int argc, char *argv[]) {
     // init memory
     gb_vm vm;
     init_vm(&vm, argv[1]);
+
+#ifdef DEBUG
+    SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
+                       SDL_LOG_PRIORITY_VERBOSE);
+#endif
 
     SDL_Event evt;
     bool debug_mode = false;

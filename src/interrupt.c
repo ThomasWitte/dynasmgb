@@ -20,6 +20,12 @@ void update_ioregs(gb_state* state) {
         }
     }
 
+    // div-register 0xff04
+    if(state->inst_count > state->div_count + cl) {
+        state->div_count = state->inst_count;
+        mem[0xff04]++;
+    }
+
     // ly-register 0xff44
     if(state->inst_count > state->ly_count + 114) {
         state->ly_count = state->inst_count;

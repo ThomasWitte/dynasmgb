@@ -25,6 +25,7 @@ bool init_vm(gb_vm *vm, const char *filename) {
     vm->state.inst_count = 0;
     vm->state.ly_count = 0;
     vm->state.tima_count = 0;
+    vm->state.div_count = 0;
     
     vm->state.ime = true;
     

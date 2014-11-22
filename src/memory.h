@@ -49,6 +49,7 @@ typedef struct {
     
     uint64_t ly_count;
     uint64_t tima_count;
+    uint64_t div_count;
 
     // interrupt timers etc
     bool ime;
