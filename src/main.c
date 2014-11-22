@@ -5,7 +5,7 @@
 #include "core.h"
 
 void usage(const char *exe) {
-    printf("usage: %s file.gb\n", exe);
+    printf("usage: %s [-b BREAKPOINT] file.gb\n", exe);
 }
 
 void sig_segv_handler(int sig, siginfo_t *si, void *unused) {
@@ -34,6 +34,19 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    int breakpoint = -1;
+    if(strcmp(argv[1], "-b") == 0) {
+        // check arguments
+        if(argc < 4) {
+            usage(argv[0]);
+            return -1;
+        }
+
+        sscanf(argv[2], "%x", &breakpoint);
+        argv += 2;
+        argc -= 2;
+    }
+
     // init memory
     gb_vm vm;
     init_vm(&vm, argv[1]);
@@ -44,15 +57,16 @@ int main(int argc, char *argv[]) {
 
     // start emulation
     while(debug_mode || run_vm(&vm)) {
-        if(vm.state.pc == 0x1a07) {
+        if(vm.state.pc == breakpoint) {
             if(!debug_mode) {
                 debug_mode = true;
                 SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
                                    SDL_LOG_PRIORITY_VERBOSE);
 
                 memory_inspector_init(&inspector, &vm.memory);
+                memory_inspector_update(&inspector);
+                printf("debugging enabled\n");
             }
-            goto test;
         }
 
         while(SDL_PollEvent(&evt)) {
@@ -78,7 +92,6 @@ int main(int argc, char *argv[]) {
                     }
                     break;
                 case SDLK_s: // step block
-test:
                     if(debug_mode) {
                         if(run_vm(&vm) == false)
                             goto end_program;

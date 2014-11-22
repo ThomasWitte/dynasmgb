@@ -8,8 +8,8 @@ void update_ioregs(gb_state* state) {
     int clock[] = {256, 4, 16, 64};
     int cl = clock[mem[0xff07] & 0x3];
 
-    if(state->inst_count/cl > state->tima_count) {
-        state->tima_count = state->inst_count/cl;
+    if(state->inst_count > state->tima_count + cl) {
+        state->tima_count = state->inst_count;
         if(mem[0xff07] & 0x4) {
             mem[0xff05]++;
             if(mem[0xff05] == 0) {
@@ -21,8 +21,8 @@ void update_ioregs(gb_state* state) {
     }
 
     // ly-register 0xff44
-    if(state->inst_count/114 > state->ly_count) {
-        state->ly_count = state->inst_count/114;
+    if(state->inst_count > state->ly_count + 114) {
+        state->ly_count = state->inst_count;
         mem[0xff44]++;
         mem[0xff44] %= 153;
 
@@ -48,7 +48,7 @@ void update_ioregs(gb_state* state) {
 
     if(mem[0xff44] < 144) {
         // if not VBLANK
-        if(state->inst_count < 51) {
+        if(state->inst_count-state->ly_count < 51) {
             // LCDC Stat mode 0
             mem[0xff41] &= ~0x07;
             
@@ -56,7 +56,7 @@ void update_ioregs(gb_state* state) {
             if(mem[0xff41] & 0x08)
                 // stat interrupt occurs
                 mem[0xff0f] |= 0x02;
-        } else if(state->inst_count < 71) {
+        } else if(state->inst_count-state->ly_count < 71) {
             // LCDC Stat mode 2
             mem[0xff41] &= ~0x07;
             mem[0xff41] |= 0x02;

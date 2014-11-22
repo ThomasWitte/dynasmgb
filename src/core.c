@@ -105,7 +105,7 @@ bool run_vm(gb_vm *vm) {
         free_block(&temp);
     }
     
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "ioregs: LY=%02x IE=%02x\n", vm->memory.mem[0xff44], vm->memory.mem[0xffff]);
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "ioregs: STAT=%02x LY=%02x IE=%02x\n", vm->memory.mem[0xff41], vm->memory.mem[0xff44], vm->memory.mem[0xffff]);
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "register: A=%02x, BC=%02x%02x, DE=%02x%02x, HL=%02x%02x, SP=%04x\n",
            vm->state.a, vm->state.b, vm->state.c, vm->state.d, vm->state.e,
            vm->state.h, vm->state.l, vm->state._sp);
