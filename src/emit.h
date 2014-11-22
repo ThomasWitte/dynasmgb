@@ -24,11 +24,13 @@ typedef struct {
     uint8_t bytes;
     uint8_t cycles, alt_cycles;
     enum {INST_FLAG_NONE            = 0x00,
-          INST_FLAG_CC_NECESSARY    = 0x01,
+          INST_FLAG_PRESERVE_CC     = 0x01,
           INST_FLAG_PERS_WRITE      = 0x02,
           INST_FLAG_USES_CC         = 0x04,
           INST_FLAG_AFFECTS_CC      = 0x08,
-          INST_FLAG_ENDS_BLOCK      = 0x10
+          INST_FLAG_ENDS_BLOCK      = 0x10,
+          INST_FLAG_SAVE_CC         = 0x20,
+          INST_FLAG_RESTORE_CC      = 0x40
     } flags;
 } gb_instruction;
 

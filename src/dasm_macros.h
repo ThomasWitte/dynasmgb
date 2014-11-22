@@ -119,7 +119,7 @@ void printnum(uint64_t addr) {
 |.endmacro
 	
 |.macro return, addr
-    | popfq
+//    | popfq
     | mov state->a, A
     | mov state->b, B
     | mov state->c, C

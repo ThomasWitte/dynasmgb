@@ -520,6 +520,44 @@ gb_instruction cb_table[] = {
 /* 0xff */ {SET,   REG_A,  BIT_7,  0, 0,   2,     2, 2,   0}
 };
 
+bool optimize_cc(gb_instruction* inst, int n) {
+    bool preserve_cc = false;
+    
+    for(int i = n-1; i >= 0; --i) {
+        if(inst[i].flags & INST_FLAG_AFFECTS_CC) {
+            continue;
+        }
+        
+        if(preserve_cc) {
+            inst[i].flags |= INST_FLAG_PRESERVE_CC;
+        }
+
+        if(inst[i].flags & INST_FLAG_USES_CC) {
+            preserve_cc = true;
+        }
+    }
+    
+    bool flags_saved = false;
+    for(int i = 0; i < n; ++i) {
+        if(flags_saved && i == n-1) {
+            inst[i].flags |= INST_FLAG_RESTORE_CC;
+            flags_saved = false;
+        }
+
+        if(flags_saved && (!(inst[i].flags & INST_FLAG_PRESERVE_CC) || inst[i].flags & INST_FLAG_USES_CC)) {
+            inst[i].flags |= INST_FLAG_RESTORE_CC;
+            flags_saved = false;
+        }
+
+        if(!flags_saved && inst[i].flags & INST_FLAG_PRESERVE_CC) {
+            inst[i].flags |= INST_FLAG_SAVE_CC;
+            flags_saved = true;
+        }
+    }
+    
+    return true;
+}
+
 // compiles block starting at start_address to gb_block
 bool compile(gb_block *block, gb_memory *mem, uint16_t start_address) {
     gb_instruction instructions[100];
@@ -552,6 +590,9 @@ bool compile(gb_block *block, gb_memory *mem, uint16_t start_address) {
         
         n++;
     }
+
+    if(!optimize_cc(instructions, n))
+        return false;
 
     return emit(block, instructions, n);
 }

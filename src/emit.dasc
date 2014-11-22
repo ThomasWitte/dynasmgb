@@ -695,8 +695,8 @@ bool emit(gb_block *block, gb_instruction *inst, int n) {
     | prologue
 
     for(int i = 0; i <= n; ++i) {
-        if((inst[i].flags & INST_FLAG_AFFECTS_CC) == 0) {
-            | pushfq
+        if(inst[i].flags & INST_FLAG_RESTORE_CC) {
+            | popfq
         }
 
         switch(inst[i].opcode) {
@@ -845,13 +845,13 @@ bool emit(gb_block *block, gb_instruction *inst, int n) {
             goto exit_fail;
         }
 
-        if((inst[i].flags & INST_FLAG_AFFECTS_CC) == 0) {
-            | popfq
+        if(inst[i].flags & INST_FLAG_SAVE_CC) {
+            | pushfq
         }
     }
 
     | add qword state->inst_count, cycles
-    | pushfq
+//    | pushfq
     | return 0
 
     size_t sz;
