@@ -27,6 +27,7 @@
 	| popfq
 |.endmacro
 
+|.if DEBUG
 |.macro print, text
     | pushfq
 	| push r0
@@ -53,6 +54,9 @@
 	| pop r0
 	| popfq
 |.endmacro
+|.else
+|.define print, .nop
+|.endif
 
 void printnum(uint64_t addr) {
     printf("Debug: %#lx\n", addr);
@@ -115,6 +119,7 @@ void printnum(uint64_t addr) {
 |.endmacro
 	
 |.macro return, addr
+    | popfq
     | mov state->a, A
     | mov state->b, B
     | mov state->c, C
@@ -157,6 +162,53 @@ void printnum(uint64_t addr) {
     || case REG_L:
     |      opcode L
     ||     break;
+    || case MEM_HL:
+    |      and xL, 0xff
+    |      and xH, 0xff
+    |      mov tmp2, xH
+    |      shl tmp2, 8
+    |      mov tmp1, xL
+    |      add tmp1, tmp2
+    |      opcode byte [aMem + tmp1]
+    ||     break;
+    || default:
+    ||     printf("Invalid operand to opcode\n");
+    ||     return false;
+    || }
+|.endmacro
+
+|.macro inst2, opcode, op1, arg2
+    || switch(op1) {
+    || case REG_A:
+    |      opcode A, arg2
+    ||     break;
+    || case REG_B:
+    |      opcode B, arg2
+    ||     break;
+    || case REG_C:
+    |      opcode C, arg2
+    ||     break;
+    || case REG_D:
+    |      opcode D, arg2
+    ||     break;
+    || case REG_E:
+    |      opcode E, arg2
+    ||     break;
+    || case REG_H:
+    |      opcode H, arg2
+    ||     break;
+    || case REG_L:
+    |      opcode L, arg2
+    ||     break;
+    || case MEM_HL:
+    |      and xL, 0xff
+    |      and xH, 0xff
+    |      mov tmp2, xH
+    |      shl tmp2, 8
+    |      mov tmp1, xL
+    |      add tmp1, tmp2
+    |      opcode byte [aMem + tmp1], arg2
+    ||     break;
     || default:
     ||     printf("Invalid operand to opcode\n");
     ||     return false;
@@ -192,7 +244,12 @@ void printnum(uint64_t addr) {
     |          opcode A, inst->args[1]
     ||         break;
     ||     case MEM_8:
-    |          opcode A, [aMem + (0xff00+inst->args[1])]
+// TODO: implement handling keypresses
+    ||         if(inst->args[1] == 0x00) {
+    |              opcode A, 0x0f
+    ||         } else {
+    |              opcode A, [aMem + (0xff00+inst->args[1])]
+    ||         }
     ||         break;
     ||     case MEM_HL:
     |          and xL, 0xff
@@ -203,6 +260,28 @@ void printnum(uint64_t addr) {
     |          add tmp1, tmp2
     |          opcode A, [aMem + tmp1]
     ||         break;
+    ||     case MEM_BC:
+    |          and xC, 0xff
+    |          and xB, 0xff
+    |          mov tmp2, xB
+    |          shl tmp2, 8
+    |          mov tmp1, xC
+    |          add tmp1, tmp2
+    |          opcode A, [aMem + tmp1]
+    ||         break;
+    ||     case MEM_DE:
+    |          and xE, 0xff
+    |          and xD, 0xff
+    |          mov tmp2, xD
+    |          shl tmp2, 8
+    |          mov tmp1, xE
+    |          add tmp1, tmp2
+    |          opcode A, [aMem + tmp1]
+    ||         break;
+    ||     case MEM_16:
+    ||         { uint16_t addr = inst->args[1] + 256*inst->args[2];
+    |          opcode A, [aMem + addr]
+    ||         break; }
     ||     case MEM_DEC_HL:
     |          and xL, 0xff
     |          and xH, 0xff
@@ -585,8 +664,43 @@ void printnum(uint64_t addr) {
     ||         return false;
     ||     }
     ||     break;
+    || case MEM_BC:
+    ||     if(op2 == REG_A) {
+    |          and xC, 0xff
+    |          and xB, 0xff
+    |          mov tmp2, xB
+    |          shl tmp2, 8
+    |          mov tmp1, xC
+    |          add tmp1, tmp2
+    |.if 'opcode' == 'mov'
+    |          write_byte tmp1, xA
+    |.else
+    |          opcode [aMem + tmp1], A
+    |.endif    
+    ||     } else {
+    ||         printf("Unsupported operand op2=%i to opcode\n", op2);
+    ||         return false;
+    ||     }
+    ||     break;
+    || case MEM_DE:
+    ||     if(op2 == REG_A) {
+    |          and xE, 0xff
+    |          and xD, 0xff
+    |          mov tmp2, xD
+    |          shl tmp2, 8
+    |          mov tmp1, xE
+    |          add tmp1, tmp2
+    |.if 'opcode' == 'mov'
+    |          write_byte tmp1, xA
+    |.else
+    |          opcode [aMem + tmp1], A
+    |.endif    
+    ||     } else {
+    ||         printf("Unsupported operand op2=%i to opcode\n", op2);
+    ||         return false;
+    ||     }
+    ||     break;
     || case MEM_DEC_HL:
-// TODO: load through mbc
     ||     if(op2 == REG_A) {
     |          and xL, 0xff
     |          and xH, 0xff
@@ -594,7 +708,7 @@ void printnum(uint64_t addr) {
     |          shl tmp2, 8
     |          mov tmp1, xL
     |          add tmp1, tmp2
-    |          write_byte tmp1, inst->args[1]
+    |          write_byte tmp1, xA
     |          dec tmp1
     |          mov L, tmp1b
     |          shr tmp1, 8
@@ -605,7 +719,6 @@ void printnum(uint64_t addr) {
     ||     }
     ||     break;
     || case MEM_INC_HL:
-// TODO: load through mbc
     ||     if(op2 == REG_A) {
     |          and xL, 0xff
     |          and xH, 0xff
@@ -613,7 +726,7 @@ void printnum(uint64_t addr) {
     |          shl tmp2, 8
     |          mov tmp1, xL
     |          add tmp1, tmp2
-    |          write_byte tmp1, inst->args[1]
+    |          write_byte tmp1, xA
     |          inc tmp1
     |          mov L, tmp1b
     |          shr tmp1, 8
@@ -625,7 +738,7 @@ void printnum(uint64_t addr) {
     ||     break;
     || case MEM_8:
     ||     if(op2 == REG_A) {
-    |          opcode [aMem + (0xff00+inst->args[1])], A
+    |          write_byte (0xff00+inst->args[1]), xA
     ||     } else {
     ||         printf("Unsupported operand op2=%i to opcode\n", op2);
     ||         return false;
@@ -633,8 +746,9 @@ void printnum(uint64_t addr) {
     ||     break;
     || case MEM_C:
     ||     if(op2 == REG_A) {
-    |          and xC, 0xff;
-    |          opcode byte [aMem + xC + 0xff00], A
+    |          and xC, 0xff
+    |          add xC, 0xff00
+    |          write_byte xC, xA
     ||     } else {
     ||         printf("Unsupported operand op2=%i to opcode\n", op2);
     ||         return false;
@@ -644,7 +758,6 @@ void printnum(uint64_t addr) {
     ||     if(op2 == REG_A) {
 // TODO: implement static memory check at compile time
     ||         uint16_t addr = inst->args[2]*256+inst->args[1];
-    |          debug_a64 addr
     |          write_byte addr, xA
     ||     } else {
     ||         printf("Unsupported operand op2=%i to opcode\n", op2);
@@ -653,6 +766,268 @@ void printnum(uint64_t addr) {
     ||     break;
     || default:
     ||     printf("Unsupported operand op1=%i to opcode\n", op1);
+    ||     return false;
+    || }
+|.endmacro
+
+|.macro bitinst, opcode, op1, op2, prefix
+    || switch(op1) {
+    || case REG_A:
+    ||     switch(op2) {
+    ||     case BIT_0:
+    |          opcode A, prefix 0x01
+    ||         break;
+    ||     case BIT_1:
+    |          opcode A, prefix 0x02
+    ||         break;
+    ||     case BIT_2:
+    |          opcode A, prefix 0x04
+    ||         break;
+    ||     case BIT_3:
+    |          opcode A, prefix 0x08
+    ||         break;
+    ||     case BIT_4:
+    |          opcode A, prefix 0x10
+    ||         break;
+    ||     case BIT_5:
+    |          opcode A, prefix 0x20
+    ||         break;
+    ||     case BIT_6:
+    |          opcode A, prefix 0x40
+    ||         break;
+    ||     case BIT_7:
+    |          opcode A, prefix 0x80
+    ||         break;
+    ||     default:
+    ||         printf("Invalid 2nd operand to opcode.\n");
+    ||         return false;
+    ||     }
+    ||     break;
+    || case REG_B:
+    ||     switch(op2) {
+    ||     case BIT_0:
+    |          opcode B, prefix 0x01
+    ||         break;
+    ||     case BIT_1:
+    |          opcode B, prefix 0x02
+    ||         break;
+    ||     case BIT_2:
+    |          opcode B, prefix 0x04
+    ||         break;
+    ||     case BIT_3:
+    |          opcode B, prefix 0x08
+    ||         break;
+    ||     case BIT_4:
+    |          opcode B, prefix 0x10
+    ||         break;
+    ||     case BIT_5:
+    |          opcode B, prefix 0x20
+    ||         break;
+    ||     case BIT_6:
+    |          opcode B, prefix 0x40
+    ||         break;
+    ||     case BIT_7:
+    |          opcode B, prefix 0x80
+    ||         break;
+    ||     default:
+    ||         printf("Invalid 2nd operand to opcode.\n");
+    ||         return false;
+    ||     }
+    ||     break;
+    || case REG_C:
+    ||     switch(op2) {
+    ||     case BIT_0:
+    |          opcode C, prefix 0x01
+    ||         break;
+    ||     case BIT_1:
+    |          opcode C, prefix 0x02
+    ||         break;
+    ||     case BIT_2:
+    |          opcode C, prefix 0x04
+    ||         break;
+    ||     case BIT_3:
+    |          opcode C, prefix 0x08
+    ||         break;
+    ||     case BIT_4:
+    |          opcode C, prefix 0x10
+    ||         break;
+    ||     case BIT_5:
+    |          opcode C, prefix 0x20
+    ||         break;
+    ||     case BIT_6:
+    |          opcode C, prefix 0x40
+    ||         break;
+    ||     case BIT_7:
+    |          opcode C, prefix 0x80
+    ||         break;
+    ||     default:
+    ||         printf("Invalid 2nd operand to opcode.\n");
+    ||         return false;
+    ||     }
+    ||     break;
+    || case REG_D:
+    ||     switch(op2) {
+    ||     case BIT_0:
+    |          opcode D, prefix 0x01
+    ||         break;
+    ||     case BIT_1:
+    |          opcode D, prefix 0x02
+    ||         break;
+    ||     case BIT_2:
+    |          opcode D, prefix 0x04
+    ||         break;
+    ||     case BIT_3:
+    |          opcode D, prefix 0x08
+    ||         break;
+    ||     case BIT_4:
+    |          opcode D, prefix 0x10
+    ||         break;
+    ||     case BIT_5:
+    |          opcode D, prefix 0x20
+    ||         break;
+    ||     case BIT_6:
+    |          opcode D, prefix 0x40
+    ||         break;
+    ||     case BIT_7:
+    |          opcode D, prefix 0x80
+    ||         break;
+    ||     default:
+    ||         printf("Invalid 2nd operand to opcode.\n");
+    ||         return false;
+    ||     }
+    ||     break;
+    || case REG_E:
+    ||     switch(op2) {
+    ||     case BIT_0:
+    |          opcode E, prefix 0x01
+    ||         break;
+    ||     case BIT_1:
+    |          opcode E, prefix 0x02
+    ||         break;
+    ||     case BIT_2:
+    |          opcode E, prefix 0x04
+    ||         break;
+    ||     case BIT_3:
+    |          opcode E, prefix 0x08
+    ||         break;
+    ||     case BIT_4:
+    |          opcode E, prefix 0x10
+    ||         break;
+    ||     case BIT_5:
+    |          opcode E, prefix 0x20
+    ||         break;
+    ||     case BIT_6:
+    |          opcode E, prefix 0x40
+    ||         break;
+    ||     case BIT_7:
+    |          opcode E, prefix 0x80
+    ||         break;
+    ||     default:
+    ||         printf("Invalid 2nd operand to opcode.\n");
+    ||         return false;
+    ||     }
+    ||     break;
+    || case REG_H:
+    ||     switch(op2) {
+    ||     case BIT_0:
+    |          opcode H, prefix 0x01
+    ||         break;
+    ||     case BIT_1:
+    |          opcode H, prefix 0x02
+    ||         break;
+    ||     case BIT_2:
+    |          opcode H, prefix 0x04
+    ||         break;
+    ||     case BIT_3:
+    |          opcode H, prefix 0x08
+    ||         break;
+    ||     case BIT_4:
+    |          opcode H, prefix 0x10
+    ||         break;
+    ||     case BIT_5:
+    |          opcode H, prefix 0x20
+    ||         break;
+    ||     case BIT_6:
+    |          opcode H, prefix 0x40
+    ||         break;
+    ||     case BIT_7:
+    |          opcode H, prefix 0x80
+    ||         break;
+    ||     default:
+    ||         printf("Invalid 2nd operand to opcode.\n");
+    ||         return false;
+    ||     }
+    ||     break;
+    || case REG_L:
+    ||     switch(op2) {
+    ||     case BIT_0:
+    |          opcode L, prefix 0x01
+    ||         break;
+    ||     case BIT_1:
+    |          opcode L, prefix 0x02
+    ||         break;
+    ||     case BIT_2:
+    |          opcode L, prefix 0x04
+    ||         break;
+    ||     case BIT_3:
+    |          opcode L, prefix 0x08
+    ||         break;
+    ||     case BIT_4:
+    |          opcode L, prefix 0x10
+    ||         break;
+    ||     case BIT_5:
+    |          opcode L, prefix 0x20
+    ||         break;
+    ||     case BIT_6:
+    |          opcode L, prefix 0x40
+    ||         break;
+    ||     case BIT_7:
+    |          opcode L, prefix 0x80
+    ||         break;
+    ||     default:
+    ||         printf("Invalid 2nd operand to opcode.\n");
+    ||         return false;
+    ||     }
+    ||     break;
+    || case MEM_HL:
+    |      and xL, 0xff
+    |      and xH, 0xff
+    |      mov tmp2, xH
+    |      shl tmp2, 8
+    |      mov tmp1, xL
+    |      add tmp1, tmp2
+    ||     switch(op2) {
+    ||     case BIT_0:
+    |          opcode byte [aMem + tmp1], prefix 0x01
+    ||         break;
+    ||     case BIT_1:
+    |          opcode byte [aMem + tmp1], prefix 0x02
+    ||         break;
+    ||     case BIT_2:
+    |          opcode byte [aMem + tmp1], prefix 0x04
+    ||         break;
+    ||     case BIT_3:
+    |          opcode byte [aMem + tmp1], prefix 0x08
+    ||         break;
+    ||     case BIT_4:
+    |          opcode byte [aMem + tmp1], prefix 0x10
+    ||         break;
+    ||     case BIT_5:
+    |          opcode byte [aMem + tmp1], prefix 0x20
+    ||         break;
+    ||     case BIT_6:
+    |          opcode byte [aMem + tmp1], prefix 0x40
+    ||         break;
+    ||     case BIT_7:
+    |          opcode byte [aMem + tmp1], prefix 0x80
+    ||         break;
+    ||     default:
+    ||         printf("Invalid 2nd operand to opcode.\n");
+    ||         return false;
+    ||     }
+    ||     break;
+    || default:
+    ||     printf("Invalid 1st operand to opcode.\n");
     ||     return false;
     || }
 |.endmacro

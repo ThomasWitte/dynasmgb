@@ -1,7 +1,8 @@
+#include <sys/mman.h>
 #include "core.h"
 
 void free_block(gb_block *block) {
-//    free(block->func);
+    munmap(block->mem, block->size);
 }
 
 bool init_vm(gb_vm *vm, const char *filename) {
@@ -22,6 +23,8 @@ bool init_vm(gb_vm *vm, const char *filename) {
     vm->state.pc = 0x100;
     
     vm->state.inst_count = 0;
+    vm->state.ly_count = 0;
+    vm->state.tima_count = 0;
     
     vm->state.ime = true;
     
@@ -62,20 +65,24 @@ bool init_vm(gb_vm *vm, const char *filename) {
 	        vm->compiled_blocks[block][i].exec_count = 0;
 	        vm->compiled_blocks[block][i].func = 0;
 	    }
+
+    // init lcd
+    vm->win = init_window();
+
 	return true;
 }
 
 bool run_vm(gb_vm *vm) {
-    // check interrupts
-    update_ioregs(&vm->state, &vm->memory);
-    
+    uint16_t prev_pc = vm->state.last_pc;
+    vm->state.last_pc = vm->state.pc;
+
     // compile next block / get cached block
     if(vm->state.pc < 0x4000) { // first block
         if(vm->compiled_blocks[0][vm->state.pc].exec_count == 0) {
             if(!compile(&vm->compiled_blocks[0][vm->state.pc], &vm->memory, vm->state.pc))
                 goto compile_error;
         }
-        printf("execute function @%#x (count %i)\n", vm->state.pc,
+        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "execute function @%#x (count %i)\n", vm->state.pc,
                vm->compiled_blocks[0][vm->state.pc].exec_count);
         vm->compiled_blocks[0][vm->state.pc].exec_count++;
         vm->state.pc = vm->compiled_blocks[0][vm->state.pc].func(&vm->state);
@@ -85,7 +92,7 @@ bool run_vm(gb_vm *vm) {
             if(!compile(&vm->compiled_blocks[bank][vm->state.pc-0x4000], &vm->memory, vm->state.pc))
                 goto compile_error;
         }
-        printf("execute function @%#x (count %i)\n", vm->state.pc,
+        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "execute function @%#x (count %i)\n", vm->state.pc,
                vm->compiled_blocks[bank][vm->state.pc-0x4000].exec_count);
         vm->compiled_blocks[bank][vm->state.pc-0x4000].exec_count++;
         vm->state.pc = vm->compiled_blocks[bank][vm->state.pc-0x4000].func(&vm->state);
@@ -93,16 +100,33 @@ bool run_vm(gb_vm *vm) {
         gb_block temp = {0};
         if(!compile(&temp, &vm->memory, vm->state.pc))
             goto compile_error;
-        printf("execute function in ram\n");
+        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "execute function in ram\n");
         vm->state.pc = temp.func(&vm->state);
         free_block(&temp);
     }
     
-    printf("ioregs: LY=%02x\n", vm->memory.mem[0xff44]);
-    printf("register: A=%02x, BC=%02x%02x, DE=%02x%02x, HL=%02x%02x, SP=%04x\n",
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "ioregs: LY=%02x IE=%02x\n", vm->memory.mem[0xff44], vm->memory.mem[0xffff]);
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "register: A=%02x, BC=%02x%02x, DE=%02x%02x, HL=%02x%02x, SP=%04x\n",
            vm->state.a, vm->state.b, vm->state.c, vm->state.d, vm->state.e,
            vm->state.h, vm->state.l, vm->state._sp);
-    printf("next address: %#x\n", vm->state.pc);
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "previous address: %#x\n", prev_pc);
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "next address: %#x\n", vm->state.pc);
+
+    // check interrupts
+    update_ioregs(&vm->state);
+
+    uint16_t interrupt_addr = start_interrupt(&vm->state);
+    if(interrupt_addr) {
+        // save PC to stack
+        *(uint16_t*)(&vm->state.mem->mem[vm->state._sp]) = vm->state.pc;
+        vm->state._sp -= 2;
+        // jump to interrupt address
+        vm->state.pc = interrupt_addr;
+
+        if(interrupt_addr == 0x40) { // VBLANK interrupt
+            render_frame(vm->win);
+        }
+    }
     
     return true;
     
@@ -114,7 +138,11 @@ compile_error:
 bool free_vm(gb_vm *vm) {
 	for(int block = 0; block < 2; ++block)
 	    for(int i = 0; i < 0x4000; ++i)
-	        free_block(&vm->compiled_blocks[block][i]);
+            if(vm->compiled_blocks[block][i].exec_count > 0)
+	            free_block(&vm->compiled_blocks[block][i]);
+
+    // destroy window
+    deinit_window(vm->win);
 
     return gb_memory_free(&vm->memory);
 }

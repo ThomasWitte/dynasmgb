@@ -3,6 +3,13 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
+
+#ifdef DEBUG
+#define LOG_DEBUG(...) printf(__VA_ARGS__)
+#else
+#define LOG_DEBUG(...)
+#endif
 
 typedef struct {
     uint8_t* mem;

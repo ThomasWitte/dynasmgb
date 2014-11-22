@@ -1,0 +1,8 @@
+= Installation =
+
+libsdl2 und lua + lua-bitop werden zum Bauen benötigt. Derzeit wird nur Linux
+unter x86-64 untersützt. Zum Bauen ./build.sh ausführen.
+
+= Debugging =
+
+d startet/beendet den Debug-Modus, s steppt jeweils zum nächsten Block.

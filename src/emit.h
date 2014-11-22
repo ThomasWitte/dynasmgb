@@ -41,9 +41,14 @@ typedef struct {
     uint16_t _sp;
     uint16_t pc;
     
+    uint16_t last_pc;
+
     // instruction count
     uint64_t inst_count;
     
+    uint64_t ly_count;
+    uint64_t tima_count;
+
     // interrupt timers etc
     bool ime;
 } gb_state;
@@ -51,6 +56,8 @@ typedef struct {
 typedef struct {
     uint16_t(*func)(gb_state*);
     unsigned exec_count;
+    size_t size;
+    void *mem;
 } gb_block;
 
 bool emit(gb_block *block, gb_instruction *inst, int n);

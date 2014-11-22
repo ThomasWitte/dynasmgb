@@ -8,6 +8,7 @@
 #include "memory.h"
 #include "emit.h"
 
-void update_ioregs(gb_state* state, gb_memory* memory);
+void update_ioregs(gb_state* state);
+uint16_t start_interrupt(gb_state* state);
 
 #endif

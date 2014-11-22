@@ -201,7 +201,7 @@ gb_instruction inst_table[] = {
 /* 0xc4 */ {CALL,  CC_NZ,  IMM16,  0, 0,   3,     6, 3,   INST_FLAG_USES_CC},
 /* 0xc5 */ {PUSH,  REG_BC, NONE,   0, 0,   1,     4, 4,   0},
 /* 0xc6 */ {ADD,   REG_A,  IMM8,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0xc7 */ {RST,   MEM_0x00, NONE, 0, 0,   1,     4, 4,   INST_FLAG_ENDS_BLOCK},
+/* 0xc7 */ {RST,   NONE,   MEM_0x00, 0, 0, 1,     4, 4,   INST_FLAG_ENDS_BLOCK},
 /* 0xc8 */ {RET,   CC_Z,   NONE,   0, 0,   1,     5, 2,   INST_FLAG_USES_CC},
 /* 0xc9 */ {RET,   NONE,   NONE,   0, 0,   1,     4, 4,   INST_FLAG_ENDS_BLOCK},
 /* 0xca */ {JP,    CC_Z,   IMM16,  0, 0,   3,     4, 3,   INST_FLAG_USES_CC},
@@ -209,7 +209,7 @@ gb_instruction inst_table[] = {
 /* 0xcc */ {CALL,  CC_Z,   IMM16,  0, 0,   3,     6, 3,   INST_FLAG_USES_CC},
 /* 0xcd */ {CALL,  NONE,   IMM16,  0, 0,   3,     6, 6,   INST_FLAG_ENDS_BLOCK},
 /* 0xce */ {ADC,   REG_A,  IMM8,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0xcf */ {RST,   MEM_0x08, NONE, 0, 0,   1,     4, 4,   INST_FLAG_ENDS_BLOCK},
+/* 0xcf */ {RST,   NONE,   MEM_0x08, 0, 0, 1,     4, 4,   INST_FLAG_ENDS_BLOCK},
 /* 0xd0 */ {RET,   CC_NC,  NONE,   0, 0,   1,     5, 2,   INST_FLAG_USES_CC},
 /* 0xd1 */ {POP,   REG_DE, NONE,   0, 0,   1,     3, 3,   0},
 /* 0xd2 */ {JP,    CC_NC,  IMM16,  0, 0,   3,     4, 3,   INST_FLAG_USES_CC},
@@ -217,7 +217,7 @@ gb_instruction inst_table[] = {
 /* 0xd4 */ {CALL,  CC_NC,  IMM16,  0, 0,   3,     6, 3,   INST_FLAG_USES_CC},
 /* 0xd5 */ {PUSH,  REG_DE, NONE,   0, 0,   1,     4, 4,   0},
 /* 0xd6 */ {SUB,   REG_A,  IMM8,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0xd7 */ {RST,   MEM_0x10, NONE, 0, 0,   1,     4, 4,   INST_FLAG_ENDS_BLOCK},
+/* 0xd7 */ {RST,   NONE,   MEM_0x10, 0, 0, 1,     4, 4,   INST_FLAG_ENDS_BLOCK},
 /* 0xd8 */ {RET,   CC_C,   NONE,   0, 0,   1,     5, 2,   INST_FLAG_USES_CC},
 /* 0xd9 */ {RETI,  NONE,   NONE,   0, 0,   1,     4, 4,   INST_FLAG_ENDS_BLOCK},
 /* 0xda */ {JP,    CC_C,   IMM16,  0, 0,   3,     4, 3,   INST_FLAG_USES_CC},
@@ -225,7 +225,7 @@ gb_instruction inst_table[] = {
 /* 0xdc */ {CALL,  CC_C,   IMM16,  0, 0,   3,     6, 3,   INST_FLAG_USES_CC},
 /* 0xdd */ {ERROR, NONE,   NONE,   0, 0,   0,     0, 0,   0},
 /* 0xde */ {SBC,   REG_A,  IMM8,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0xdf */ {RST,   MEM_0x18, NONE, 0, 0,   1,     4, 4,   INST_FLAG_ENDS_BLOCK},
+/* 0xdf */ {RST,   NONE,   MEM_0x18, 0, 0, 1,     4, 4,   INST_FLAG_ENDS_BLOCK},
 /* 0xe0 */ {LD,    MEM_8,  REG_A,  0, 0,   2,     3, 3,   0},
 /* 0xe1 */ {POP,   REG_HL, NONE,   0, 0,   1,     3, 3,   0},
 /* 0xe2 */ {LD,    MEM_C,  REG_A,  0, 0,   1,     2, 2,   0},
@@ -233,7 +233,7 @@ gb_instruction inst_table[] = {
 /* 0xe4 */ {ERROR, NONE,   NONE,   0, 0,   0,     0, 0,   0},
 /* 0xe5 */ {PUSH,  REG_HL, NONE,   0, 0,   1,     4, 4,   0},
 /* 0xe6 */ {AND,   REG_A,  IMM8,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0xe7 */ {RST,   MEM_0x20, NONE, 0, 0,   1,     4, 4,   INST_FLAG_ENDS_BLOCK},
+/* 0xe7 */ {RST,   NONE,   MEM_0x20, 0, 0, 1,     4, 4,   INST_FLAG_ENDS_BLOCK},
 /* 0xe8 */ {ADD16, REG_SP, MEM_8,  0, 0,   2,     4, 4,   INST_FLAG_AFFECTS_CC},
 /* 0xe9 */ {JP,    NONE,   MEM_HL, 0, 0,   1,     1, 1,   INST_FLAG_ENDS_BLOCK},
 /* 0xea */ {LD,    MEM_16, REG_A,  0, 0,   3,     4, 4,   0},
@@ -241,7 +241,7 @@ gb_instruction inst_table[] = {
 /* 0xec */ {ERROR, NONE,   NONE,   0, 0,   0,     0, 0,   0},
 /* 0xed */ {ERROR, NONE,   NONE,   0, 0,   0,     0, 0,   0},
 /* 0xee */ {XOR,   REG_A,  IMM8,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0xef */ {RST,   MEM_0x28, NONE, 0, 0,   1,     4, 4,   INST_FLAG_ENDS_BLOCK},
+/* 0xef */ {RST,   NONE,   MEM_0x28, 0, 0, 1,     4, 4,   INST_FLAG_ENDS_BLOCK},
 /* 0xf0 */ {LD,    REG_A,  MEM_8,  0, 0,   2,     3, 3,   0},
 /* 0xf1 */ {POP,   REG_AF, NONE,   0, 0,   1,     3, 3,   INST_FLAG_AFFECTS_CC},
 /* 0xf2 */ {LD,    REG_A,  MEM_C,  0, 0,   1,     2, 2,   0},
@@ -249,7 +249,7 @@ gb_instruction inst_table[] = {
 /* 0xf4 */ {ERROR, NONE,   NONE,   0, 0,   0,     0, 0,   0},
 /* 0xf5 */ {PUSH,  REG_AF, NONE,   0, 0,   1,     4, 4,   INST_FLAG_USES_CC},
 /* 0xf6 */ {OR,    REG_A,  IMM8,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0xf7 */ {RST,   MEM_0x30, NONE, 0, 0,   1,     4, 4,   INST_FLAG_ENDS_BLOCK},
+/* 0xf7 */ {RST,   NONE,   MEM_0x30, 0, 0, 1,     4, 4,   INST_FLAG_ENDS_BLOCK},
 /* 0xf8 */ {LD16,  REG_HL, MEM_8,  0, 0,   2,     3, 3,   INST_FLAG_AFFECTS_CC},
 /* 0xf9 */ {LD16,  REG_SP, REG_HL, 0, 0,   1,     2, 2,   0},
 /* 0xfa */ {LD,    REG_A,  MEM_16, 0, 0,   3,     4, 4,   0},
@@ -532,7 +532,7 @@ bool compile(gb_block *block, gb_memory *mem, uint16_t start_address) {
             instructions[n] = inst_table[opcode];
         } else {
             opcode = mem->mem[i+1];
-            instructions[n] = inst_table[opcode];
+            instructions[n] = cb_table[opcode];
         }
         
         instructions[n].args = mem->mem + i;
@@ -543,7 +543,7 @@ bool compile(gb_block *block, gb_memory *mem, uint16_t start_address) {
             printf("Invalid Opcode! (%#x)\n", opcode);
             return false;
         } else {
-            printf("inst: %i @%#x\n", instructions[n].opcode, instructions[n].address);
+            LOG_DEBUG("inst: %i @%#x\n", instructions[n].opcode, instructions[n].address);
         }
         
         if(instructions[n].flags & INST_FLAG_ENDS_BLOCK || n >= 99) {
