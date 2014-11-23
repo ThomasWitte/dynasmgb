@@ -1,2 +1,3 @@
 src/emit.c
 dynasmgb
+*.o
