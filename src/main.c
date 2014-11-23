@@ -8,6 +8,8 @@ void usage(const char *exe) {
     printf("usage: %s [-b BREAKPOINT] file.gb\n", exe);
 }
 
+//gb_vm vm;
+
 void sig_segv_handler(int sig, siginfo_t *si, void *unused) {
     void *array[10];
     size_t size;
@@ -17,6 +19,14 @@ void sig_segv_handler(int sig, siginfo_t *si, void *unused) {
     printf("Got SIGSEGV at address: %#lx\n",(long) si->si_addr);
 
     backtrace_symbols_fd(array, size, STDERR_FILENO);
+
+/*    printf("ioregs: STAT=%02x LY=%02x IE=%02x\n", vm.memory.mem[0xff41], vm.memory.mem[0xff44], vm.memory.mem[0xffff]);
+    printf("register: A=%02x, BC=%02x%02x, DE=%02x%02x, HL=%02x%02x, SP=%04x\n",
+           vm.state.a, vm.state.b, vm.state.c, vm.state.d, vm.state.e,
+           vm.state.h, vm.state.l, vm.state._sp);
+    printf("last address: %#x\n", vm.state.last_pc);
+    printf("next address: %#x\n", vm.state.pc);*/
+
     exit(1);
 }
 

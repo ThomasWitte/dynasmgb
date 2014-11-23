@@ -246,6 +246,10 @@ void printnum(uint64_t addr) {
     ||     case MEM_8:
     |          opcode A, [aMem + (0xff00+inst->args[1])]
     ||         break;
+    ||     case MEM_C:
+    |          and xC, 0xff
+    |          opcode A, [aMem + xC + 0xff00]
+    ||         break;
     ||     case MEM_HL:
     |          and xL, 0xff
     |          and xH, 0xff

@@ -26,6 +26,34 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
 
     if(addr < 0x8000) {
         LOG_DEBUG("write to rom @address %#lx\n", addr);
+        
+        switch(state->mem->mbc) {
+        case MBC_NONE:
+            break;
+        case MBC1:
+            if(addr >= 0x6000) {
+                state->mem->mbc_mode = value & 0x01;
+            } else if(addr >= 0x4000) {
+                if(state->mem->mbc_mode) {
+                    gb_memory_change_ram_bank(state->mem, value);
+                } else {
+                    state->mem->mbc_data = value << 5;
+                }
+            } else if(addr >= 0x2000) {
+                int bank = (value & 0x1f) | (state->mem->mbc_mode ? 0 : (state->mem->mbc_data & 0x60));
+                gb_memory_change_rom_bank(state->mem, bank);
+            }
+            break;
+        case MBC2:
+            break;
+        case MBC3:
+            break;
+        case MBC5:
+            break;
+        default:
+            printf("Unknown MBC, cannot switch bank\n");
+            break;
+        }
     } else if(addr == 0xff05) {
         LOG_DEBUG("Memory write to %#lx, reset to 0\n", addr);
         mem[addr] = 0;
@@ -69,7 +97,8 @@ bool gb_memory_init(gb_memory *mem, const char *filename) {
 
     mem->filename = filename;
     mem->mbc = mem->mem[0x0147];
-    
+    mem->mbc_mode = 0;
+    mem->mbc_data = 0;
     mem->current_rom_bank = 1;
     mem->current_ram_bank = 0;
     
@@ -77,13 +106,33 @@ bool gb_memory_init(gb_memory *mem, const char *filename) {
 }
 
 // change rom bank to bank if supported
-bool gb_memory_change_rom_bank(gb_memory *mem, int bank) {
-    return false;
+void gb_memory_change_rom_bank(gb_memory *mem, int bank) {
+    if(munmap(mem->mem + 0x4000, 0x4000) != 0) {
+        printf("munmap failed (%i)\n", errno);
+        return;
+    }
+    
+    int fd = open(mem->filename, O_RDONLY);
+    if(fd < 0) {
+        printf("Could not open file! (%i)\n", errno);
+        return;
+    }
+    
+    if(mmap(mem->mem + 0x4000, 0x4000, PROT_READ,
+            MAP_PRIVATE | MAP_FIXED, fd, 0x4000 * bank) == MAP_FAILED) {
+        printf("mmap failed! (%i)\n", errno);
+        return;
+    }
+    close(fd);
+    
+    mem->current_rom_bank = bank;
+    
+    return;
 }
 
 // change ram bank to bank if supported
-bool gb_memory_change_ram_bank(gb_memory *mem, int bank) {
-    return false;
+void gb_memory_change_ram_bank(gb_memory *mem, int bank) {
+    return;
 }
 
 // free memory again

@@ -28,6 +28,7 @@ bool init_vm(gb_vm *vm, const char *filename) {
     vm->state.div_count = 0;
     
     vm->state.ime = true;
+    vm->state.halt = false;
     
     vm->memory.mem[0xff05] = 0x00;
 	vm->memory.mem[0xff06] = 0x00;
@@ -61,7 +62,7 @@ bool init_vm(gb_vm *vm, const char *filename) {
 	vm->memory.mem[0xff4b] = 0x00;
 	vm->memory.mem[0xffff] = 0x00;
 	
-	for(int block = 0; block < 2; ++block)
+	for(int block = 0; block < 4; ++block)
 	    for(int i = 0; i < 0x4000; ++i) {
 	        vm->compiled_blocks[block][i].exec_count = 0;
 	        vm->compiled_blocks[block][i].func = 0;
@@ -88,7 +89,7 @@ bool run_vm(gb_vm *vm) {
         vm->compiled_blocks[0][vm->state.pc].exec_count++;
         vm->state.pc = vm->compiled_blocks[0][vm->state.pc].func(&vm->state);
     } else if(vm->state.pc < 0x8000) { // execute function in rom
-        int bank = vm->memory.current_rom_bank;
+        uint8_t bank = vm->memory.current_rom_bank;
         if(vm->compiled_blocks[bank][vm->state.pc-0x4000].exec_count == 0) {
             if(!compile(&vm->compiled_blocks[bank][vm->state.pc-0x4000], &vm->memory, vm->state.pc))
                 goto compile_error;
@@ -107,37 +108,59 @@ bool run_vm(gb_vm *vm) {
     }
     
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "ioregs: STAT=%02x LY=%02x IE=%02x\n", vm->memory.mem[0xff41], vm->memory.mem[0xff44], vm->memory.mem[0xffff]);
+    if(vm->state._sp < 0xfff0)
+        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "stack: %02x %02x |%02x %02x %02x %02x\n",
+                     vm->memory.mem[vm->state._sp-2], vm->memory.mem[vm->state._sp-1],
+                     vm->memory.mem[vm->state._sp], vm->memory.mem[vm->state._sp+1],
+                     vm->memory.mem[vm->state._sp+2], vm->memory.mem[vm->state._sp+3]);
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "register: A=%02x, BC=%02x%02x, DE=%02x%02x, HL=%02x%02x, SP=%04x\n",
            vm->state.a, vm->state.b, vm->state.c, vm->state.d, vm->state.e,
            vm->state.h, vm->state.l, vm->state._sp);
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "previous address: %#x\n", prev_pc);
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "next address: %#x\n", vm->state.pc);
 
-    // check interrupts
-    update_ioregs(&vm->state);
+    do {
+        // check interrupts
+        update_ioregs(&vm->state);
 
-    uint16_t interrupt_addr = start_interrupt(&vm->state);
-    if(interrupt_addr) {
-        // save PC to stack
-        *(uint16_t*)(&vm->state.mem->mem[vm->state._sp]) = vm->state.pc;
-        vm->state._sp -= 2;
-        // jump to interrupt address
-        vm->state.pc = interrupt_addr;
+        uint16_t interrupt_addr = start_interrupt(&vm->state);
+        if(interrupt_addr) {
+            // end halt mode
+            vm->state.halt = false;
+        
+            // save PC to stack
+            vm->state._sp -= 2;
+            *(uint16_t*)(&vm->state.mem->mem[vm->state._sp]) = vm->state.pc;
+            // jump to interrupt address
+            vm->state.pc = interrupt_addr;
 
-        if(interrupt_addr == 0x40) { // VBLANK interrupt
-            render_frame(vm->win);
+            if(interrupt_addr == 0x40) { // VBLANK interrupt
+                render_frame(vm->win);
+            }
         }
-    }
+        
+        if(vm->state.halt) {
+            vm->state.inst_count += 16;
+        }
+    } while(vm->state.halt);
     
     return true;
     
 compile_error:
-    printf("an error occurred while compiling the function @%#x.\n", vm->state.pc);
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "an error occurred while compiling the function @%#x.\n", vm->state.pc);
+
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "ioregs: STAT=%02x LY=%02x IE=%02x\n", vm->memory.mem[0xff41], vm->memory.mem[0xff44], vm->memory.mem[0xffff]);
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "register: A=%02x, BC=%02x%02x, DE=%02x%02x, HL=%02x%02x, SP=%04x\n",
+           vm->state.a, vm->state.b, vm->state.c, vm->state.d, vm->state.e,
+           vm->state.h, vm->state.l, vm->state._sp);
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "previous address: %#x\n", prev_pc);
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "next address: %#x\n", vm->state.pc);
+
     return false;
 }
 
 bool free_vm(gb_vm *vm) {
-	for(int block = 0; block < 2; ++block)
+	for(int block = 0; block < 4; ++block)
 	    for(int i = 0; i < 0x4000; ++i)
             if(vm->compiled_blocks[block][i].exec_count > 0)
 	            free_block(&vm->compiled_blocks[block][i]);

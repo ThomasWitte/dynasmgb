@@ -73,10 +73,10 @@ bool inst_jp(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     }
 
     if(inst->opcode == CALL || inst->opcode == RST) {
+	    | dec SP
+	    | dec SP
         | and xSP, 0xffff
 	    | mov word [aMem+xSP], (uint16_t)(inst->address + inst->bytes)
-	    | dec SP
-	    | dec SP
     }
 
     | add qword state->inst_count, *cycles + inst->cycles;
@@ -114,6 +114,9 @@ bool inst_jp(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
         break;
     case MEM_0x30:
         | return 0x30
+        break;
+    case MEM_0x38:
+        | return 0x38
         break;
     default:
         printf("Invalid 2nd operand to JP/CALL\n");
@@ -157,10 +160,10 @@ bool inst_ret(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     }
 
     | add qword state->inst_count, *cycles + inst->cycles;
-    | inc SP
-    | inc SP
     | and xSP, 0xffff
     | mov tmp1, [aMem+xSP]
+    | inc SP
+    | inc SP
     | and tmp1, 0xffff
     | return tmp1
 
@@ -212,7 +215,7 @@ bool inst_ld16(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
         }
         break;
     default:
-        printf("Invalid 1st operand to LD16\n");
+        printf("Invalid 1st operand to LD16: %i\n", inst->op1);
         return false;
     }
     *cycles += inst->cycles;
@@ -223,28 +226,28 @@ bool inst_push(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | print "PUSH"
     switch(inst->op1) {
     case REG_AF:
+        | dec SP
+        | dec SP
         | mov [aMem + xSP + 1], A
         | mov byte [aMem + xSP], 0
-        | dec SP
-        | dec SP
         break;
     case REG_BC:
+        | dec SP
+        | dec SP
         | mov [aMem + xSP + 1], B
         | mov [aMem + xSP], C
-        | dec SP
-        | dec SP
         break;
     case REG_DE:
+        | dec SP
+        | dec SP
         | mov [aMem + xSP + 1], D
         | mov [aMem + xSP], E
-        | dec SP
-        | dec SP
         break;
     case REG_HL:
+        | dec SP
+        | dec SP
         | mov [aMem + xSP + 1], H
         | mov [aMem + xSP], L
-        | dec SP
-        | dec SP
         break;
     default:
         printf("Invalid operand to PUSH\n");
@@ -258,27 +261,27 @@ bool inst_pop(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | print "POP"
     switch(inst->op1) {
     case REG_AF:
-        | inc SP
-        | inc SP
         | mov A, [aMem + xSP + 1]
+        | inc SP
+        | inc SP
         break;
     case REG_BC:
-        | inc SP
-        | inc SP
         | mov B, [aMem + xSP + 1]
         | mov C, [aMem + xSP]
+        | inc SP
+        | inc SP
         break;
     case REG_DE:
-        | inc SP
-        | inc SP
         | mov D, [aMem + xSP + 1]
         | mov E, [aMem + xSP]
+        | inc SP
+        | inc SP
         break;
     case REG_HL:
-        | inc SP
-        | inc SP
         | mov H, [aMem + xSP + 1]
         | mov L, [aMem + xSP]
+        | inc SP
+        | inc SP
         break;
     default:
         printf("Invalid operand to PUSH\n");
@@ -528,6 +531,13 @@ bool inst_bit(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     return true;
 }
 
+bool inst_ccf(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+    | print "CCF"
+    | cmc 
+    *cycles += inst->cycles;
+    return true;
+}
+
 bool inst_res(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | print "RES"
     | bitinst and, inst->op1, inst->op2, ~
@@ -559,6 +569,13 @@ bool inst_rrc(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 bool inst_rlc(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | print "RLC"
     | inst2, rcl, inst->op1, 1
+    *cycles += inst->cycles;
+    return true;
+}
+
+bool inst_sbc(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+    | print "SBC"
+	| inst sbb, inst->op1, inst->op2
     *cycles += inst->cycles;
     return true;
 }
@@ -671,6 +688,16 @@ bool inst_swap(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     *cycles += inst->cycles;
     return true;
 }
+
+bool inst_halt(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+    | print "HALT"
+    *cycles += inst->cycles;
+    | mov byte state->halt, 1
+    | add qword state->inst_count, *cycles
+    | return inst->address + inst->bytes
+    return true;
+}
+
 bool emit(gb_block *block, gb_instruction *inst, int n) {
     dasm_State* d;
     uint32_t npc = 4;
@@ -702,6 +729,10 @@ bool emit(gb_block *block, gb_instruction *inst, int n) {
         switch(inst[i].opcode) {
         case NOP:
             if(!inst_nop(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
+        case HALT:
+            if(!inst_halt(Dst, &inst[i], &cycles))
                 goto exit_fail;
             break;
         case LD16:
@@ -757,6 +788,10 @@ bool emit(gb_block *block, gb_instruction *inst, int n) {
             break;
 		case CP:
 	        if(!inst_cp(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
+		case CCF:
+	        if(!inst_ccf(Dst, &inst[i], &cycles))
                 goto exit_fail;
             break;
         case OR:
@@ -818,6 +853,10 @@ bool emit(gb_block *block, gb_instruction *inst, int n) {
             break;
         case RLC:
             if(!inst_rlc(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
+        case SBC:
+            if(!inst_sbc(Dst, &inst[i], &cycles))
                 goto exit_fail;
             break;
         case SET:

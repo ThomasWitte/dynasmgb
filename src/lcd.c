@@ -55,17 +55,17 @@ render_back(uint32_t *buf, uint8_t* addr_sp)
         int x_offset = addr_sp[0xff43];
         for(int sprite = 0; sprite < 40; ++sprite) {
             int sposy = addr_sp[0xfe00 + 4*sprite] - 8;
-            int sposx = addr_sp[0xfe01 + 4*sprite] - 8;
+            int sposx = addr_sp[0xfe01 + 4*sprite] - 8 - addr_sp[0xff43];
             uint8_t tile_idx = addr_sp[0xfe02 + 4*sprite];
-//            uint8_t flags = addr_sp[0xfe03 + 4*sprite];
+            uint8_t flags = addr_sp[0xfe03 + 4*sprite];
 
-            if(sposy >= y && sposy < y+8) {
+            if(sposy > y && sposy <= y+8) {
                 // sprite wird in zeile angezeigt
                 for(int x = 0; x < 8; ++x) {
                     int col = (addr_sp[0x8000 + 16*tile_idx + 2*(y+8-sposy)] >> (7-x)) % 2 +
                               (addr_sp[0x8001 + 16*tile_idx + 2*(y+8-sposy)] >> (7-x)) % 2;
                     if(col != 0) {
-                        buf[y*160 + x + sposx + x_offset] = pal_grey[col];
+                        buf[y*160 + (flags & 0x20 ? 7-x : x) + sposx + x_offset] = pal_grey[col];
                     }
                 }
             }

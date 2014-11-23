@@ -15,8 +15,10 @@ typedef struct {
     uint8_t* mem;
     const char* filename;
     enum {MBC_NONE = 0x00, MBC1 = 0x01, MBC2 = 0x05, MBC3 = 0x11, MBC5 = 0x19} mbc;
-    int current_rom_bank;
-    int current_ram_bank;
+    uint8_t mbc_mode;
+    uint8_t mbc_data;
+    uint8_t current_rom_bank;
+    uint8_t current_ram_bank;
 } gb_memory;
 
 typedef struct {
@@ -53,6 +55,9 @@ typedef struct {
 
     // interrupt timers etc
     bool ime;
+    
+    // cpu is in halt state
+    bool halt;
 } gb_state;
 
 // emulate write through mbc
@@ -62,10 +67,10 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value);
 bool gb_memory_init(gb_memory *mem, const char *filename);
 
 // change rom bank to bank if supported
-bool gb_memory_change_rom_bank(gb_memory *mem, int bank);
+void gb_memory_change_rom_bank(gb_memory *mem, int bank);
 
 // change ram bank to bank if supported
-bool gb_memory_change_ram_bank(gb_memory *mem, int bank);
+void gb_memory_change_ram_bank(gb_memory *mem, int bank);
 
 // free memory again
 bool gb_memory_free(gb_memory *mem);
