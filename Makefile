@@ -15,4 +15,4 @@ src/%.c: src/%.dasc
 	lua dynasm/dynasm.lua -I src -o $@ $<
 	
 clean:
-	rm -f $(BIN) $(OBJ) src/emit.c
+	rm -f $(BIN) $(OBJ)
