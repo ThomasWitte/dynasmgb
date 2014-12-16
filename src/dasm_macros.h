@@ -58,7 +58,69 @@
 |.define print, .nop
 |.endif
 
-void printnum(uint64_t addr) {
+void printtext(const char *s) {
+    printf("%s", s);
+}
+
+|.macro cg_print, addr
+    | pushfq
+	| push r0
+	| push r1
+	| push r2
+	| push r6
+	| push r7
+	| push r8
+	| push r9
+	| push r10
+	| push r11
+	| mov rArg1, addr
+	| mov rax, &printtext
+	| call rax
+	| .nop 1
+	| pop r11
+	| pop r10
+	| pop r9
+	| pop r8
+	| pop r7
+	| pop r6
+	| pop r2
+	| pop r1
+	| pop r0
+	| popfq
+|.endmacro
+
+void printnum(uint16_t num) {
+    printf("%i", num);
+}
+
+|.macro cg_printi, addr
+    | pushfq
+	| push r0
+	| push r1
+	| push r2
+	| push r6
+	| push r7
+	| push r8
+	| push r9
+	| push r10
+	| push r11
+	| mov rArg1, addr
+	| mov rax, &printnum
+	| call rax
+	| .nop 1
+	| pop r11
+	| pop r10
+	| pop r9
+	| pop r8
+	| pop r7
+	| pop r6
+	| pop r2
+	| pop r1
+	| pop r0
+	| popfq
+|.endmacro
+
+void printhex(uint64_t addr) {
     printf("Debug: %#lx\n", addr);
 }
 
@@ -74,7 +136,7 @@ void printnum(uint64_t addr) {
 	| push r10
 	| push r11
 	| mov rArg1, addr
-	| mov rax, &printnum
+	| mov rax, &printhex
 	| call rax
 	| .nop 1
 	| pop r11

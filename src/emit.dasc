@@ -51,7 +51,7 @@ bool inst_nop(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 
 bool inst_jp(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | print "JP/CALL"
-    
+
     switch(inst->op1) {
     case NONE:
         break;
@@ -73,11 +73,17 @@ bool inst_jp(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     }
 
     if(inst->opcode == CALL || inst->opcode == RST) {
+        | cg_print "call from "
 	    | dec SP
 	    | dec SP
         | and xSP, 0xffff
 	    | mov word [aMem+xSP], (uint16_t)(inst->address + inst->bytes)
+    } else {
+        | cg_print "jmp from "
     }
+
+    | cg_printi inst->address
+    | cg_print " to "
 
     | add qword state->inst_count, *cycles + inst->cycles;
 
@@ -134,7 +140,7 @@ bool inst_jp(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 
 bool inst_ret(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | print "RET"
-    
+
     switch(inst->op1) {
     case NONE:
         break;
@@ -154,6 +160,16 @@ bool inst_ret(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
         printf("Invalid 1st operand to RET\n");
         return false;
     }
+
+    if(inst->opcode == RETI) {
+    	| cg_print "iret from "
+    } else {
+        | cg_print "ret from "
+    }
+    
+    | cg_printi inst->address
+    | cg_print " to "
+
 
     if(inst->opcode == RETI) {
     	| mov byte state->ime, 1
