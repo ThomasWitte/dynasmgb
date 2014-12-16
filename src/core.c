@@ -119,7 +119,9 @@ bool run_vm(gb_vm *vm) {
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "previous address: %#x\n", prev_pc);
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "next address: %#x\n", vm->state.pc);
 
+#ifdef DEBUG_CG
     printf("%i\n", vm->state.pc);
+#endif
 
     do {
         // check interrupts
@@ -127,7 +129,9 @@ bool run_vm(gb_vm *vm) {
 
         uint16_t interrupt_addr = start_interrupt(&vm->state);
         if(interrupt_addr) {
+#ifdef DEBUG_CG
             printf("interrupt from %i to %i\n", vm->state.pc, interrupt_addr);
+#endif
 
             // end halt mode
             vm->state.halt = false;

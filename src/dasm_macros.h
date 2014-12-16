@@ -58,6 +58,7 @@
 |.define print, .nop
 |.endif
 
+|.if DEBUG_CG
 void printtext(const char *s) {
     printf("%s", s);
 }
@@ -119,6 +120,10 @@ void printnum(uint16_t num) {
 	| pop r0
 	| popfq
 |.endmacro
+|.else
+|.define cg_print, .nop
+|.define cg_printi, .nop
+|.endif
 
 void printhex(uint64_t addr) {
     printf("Debug: %#lx\n", addr);
