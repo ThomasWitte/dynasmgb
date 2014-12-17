@@ -26,6 +26,9 @@ void update_ioregs(gb_state* state) {
         mem[0xff04]++;
     }
 
+    // reset the coincidence flag
+    mem[0xff41] &= ~0x04;
+
     // ly-register 0xff44
     if(state->inst_count > state->ly_count + 114) {
         state->ly_count = state->inst_count;
@@ -36,56 +39,56 @@ void update_ioregs(gb_state* state) {
             update_line(mem);
         }
 
+        if(mem[0xff45] == mem[0xff44]) {
+            // Set the coincidence flag
+            mem[0xff41] |= 0x04;
+            
+            // Coincidence interrupt selected
+            if(mem[0xff41] & 0x40)
+                // stat interrupt occurs
+                mem[0xff0f] |= 0x02;
+        }
+
         // if-register 0xff0f
         if(mem[0xff44] == 144) {
             // VBLANK-Interrupt ist anhängig
             mem[0xff0f] |= 0x01;
 
-            // LCDC Stat mode 1
-            mem[0xff41] &= ~0x07;
-            mem[0xff41] |= 0x01;
-            
             // mode 1 interrupt selected
-            if(mem[0xff41] & 0x10)
+            if(mem[0xff41] & 0x10 && (mem[0xff41] & 0x03) != 1)
                 // stat interrupt occurs
                 mem[0xff0f] |= 0x02;
+
+            // LCDC Stat mode 1
+            mem[0xff41] &= ~0x03;
+            mem[0xff41] |= 0x01;
         }
     }
 
     if(mem[0xff44] < 144) {
         // if not VBLANK
-        if(state->inst_count-state->ly_count < 51) {
-            // LCDC Stat mode 0
-            mem[0xff41] &= ~0x07;
-            
-            // mode 0 interrupt selected
-            if(mem[0xff41] & 0x08)
-                // stat interrupt occurs
-                mem[0xff0f] |= 0x02;
-        } else if(state->inst_count-state->ly_count < 71) {
-            // LCDC Stat mode 2
-            mem[0xff41] &= ~0x07;
-            mem[0xff41] |= 0x02;
-            
+        if(state->inst_count-state->ly_count < 20) {
             // mode 2 interrupt selected
-            if(mem[0xff41] & 0x20)
+            if(mem[0xff41] & 0x20 && (mem[0xff41] & 0x03) != 2)
                 // stat interrupt occurs
                 mem[0xff0f] |= 0x02;
-        } else {
-            // LCDC Stat mode 3
-            mem[0xff41] &= ~0x07;
-            mem[0xff41] |= 0x03;
-        }
-    }
 
-    if(mem[0xff45] == mem[0xff44]) {
-        // Set the coincidence flag
-        mem[0xff41] |= 0x04;
-        
-        // Coincidence interrupt selected
-        if(mem[0xff41] & 0x40)
-            // stat interrupt occurs
-            mem[0xff0f] |= 0x02;
+            // LCDC Stat mode 2
+            mem[0xff41] &= ~0x03;
+            mem[0xff41] |= 0x02;
+        } else if(state->inst_count-state->ly_count < 63) {
+            // LCDC Stat mode 3
+            mem[0xff41] &= ~0x03;
+            mem[0xff41] |= 0x03;
+        } else {
+            // mode 0 interrupt selected
+            if(mem[0xff41] & 0x08 && (mem[0xff41] & 0x03) != 0)
+                // stat interrupt occurs
+                mem[0xff0f] |= 0x02;
+
+            // LCDC Stat mode 0
+            mem[0xff41] &= ~0x03;
+        }
     }
 }
 

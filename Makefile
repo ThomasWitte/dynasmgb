@@ -5,6 +5,8 @@ LIBS = -lSDL2
 BIN = dynasmgb
 OBJ = core.o instructions.o lcd.o memory.o emit.o interrupt.o main.o memory_inspector.o
 
+all: $(BIN)
+
 debug_cg: CFLAGS += -D DEBUG_CG
 debug_cg: DYNASMFLAGS += -D DEBUG_CG
 debug_cg: $(BIN)
