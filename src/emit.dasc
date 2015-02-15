@@ -625,19 +625,80 @@ bool inst_srl(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 }
 
 bool inst_daa(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
-// TODO: implement correctly
-    | print "DAA"
+// source: http://stackoverflow.com/questions/8119577/z80-daa-instruction
+	| print "DAA"
+	| pushf
+	| pop tmp1w
+	| test tmp1w, 0x1
+	| jz >1
+	| test tmp1w, 0x10
+	| jz >3
+// CF=1, AF=1
+	| cmp A, 0x65
+	| jg >5
+	| add A, 0x34
+	| 5:
+	| add A, 0x66
+	| jp >2
+	| 3:
+// CF=1, AF=0
     | mov tmp1b, A
     | and tmp1b, 0x0f
     | cmp tmp1b, 0x0a
-    | jl >1
-    | sub tmp1b, 0x0a
-    | add A, 0x10
-    | and A, 0xf0
-    | or A, tmp1b
-    | 1:
-    *cycles += inst->cycles;
-    return true;
+    | jl >6
+    | add A, 0x06
+    | 6:
+    | mov tmp1b, A
+    | and tmp1b, 0xf0
+    | cmp tmp1b, 0x30
+    | jl >6
+    | add A, 0xA0
+	| jp >2
+    | 6:
+	| add A, 0x60
+	| jp >2
+	| 1:
+	| test tmp1w, 0x10
+	| jz >4
+// CF=0, AF=1
+    | mov tmp1b, A
+    | and tmp1b, 0x0f
+    | cmp tmp1b, 0x05
+    | jl >6
+    | add A, 0xFA
+	| jp >2
+    | 6:
+    | mov tmp1b, A
+    | and tmp1b, 0xf0
+    | cmp tmp1b, 0xa0
+    | jl >6
+    | add A, 0x66
+	| jp >2
+    | 6:
+	| add A, 0x06
+	| jp >2
+	| 4:
+// CF=0, AF=0
+    | mov tmp1b, A
+    | and tmp1b, 0x0f
+    | cmp tmp1b, 0x09
+    | jg >6
+    | add A, 0x06
+	| mov tmp1b, A
+    | and tmp1b, 0xf0
+    | cmp tmp1b, 0x90
+	| jne >6
+	| add A, 0x60
+	| jp >2
+    | 6:
+	| mov tmp1b, A
+    | and tmp1b, 0xf0
+    | cmp tmp1b, 0xa0
+	| jl >2
+	| add A, 0x60
+	| 2:
+	*cycles += inst->cycles;
+	return true;
 }
 
 bool inst_swap(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
