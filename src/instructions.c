@@ -41,7 +41,7 @@ gb_instruction inst_table[] = {
 /* 0x24 */ {INC,   REG_H,  NONE,   0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
 /* 0x25 */ {DEC,   REG_H,  NONE,   0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
 /* 0x26 */ {LD,    REG_H,  IMM8,   0, 0,   2,     2, 2,   0},
-/* 0x27 */ {DAA,   NONE,   NONE,   0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
+/* 0x27 */ {DAA,   NONE,   NONE,   0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
 /* 0x28 */ {JR,    CC_Z,   IMM8,   0, 0,   2,     3, 2,   INST_FLAG_USES_CC},
 /* 0x29 */ {ADD16, REG_HL, REG_HL, 0, 0,   1,     2, 2,   INST_FLAG_AFFECTS_CC},
 /* 0x2a */ {LD,    REG_A,  MEM_INC_HL, 0,0,1,     2, 2,   0},
@@ -138,14 +138,14 @@ gb_instruction inst_table[] = {
 /* 0x85 */ {ADD,   REG_A,  REG_L,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
 /* 0x86 */ {ADD,   REG_A,  MEM_HL, 0, 0,   1,     2, 2,   INST_FLAG_AFFECTS_CC},
 /* 0x87 */ {ADD,   REG_A,  REG_A,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
-/* 0x88 */ {ADC,   REG_A,  REG_B,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
-/* 0x89 */ {ADC,   REG_A,  REG_C,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
-/* 0x8a */ {ADC,   REG_A,  REG_D,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
-/* 0x8b */ {ADC,   REG_A,  REG_E,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
-/* 0x8c */ {ADC,   REG_A,  REG_H,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
-/* 0x8d */ {ADC,   REG_A,  REG_L,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
-/* 0x8e */ {ADC,   REG_A,  MEM_HL, 0, 0,   1,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0x8f */ {ADC,   REG_A,  REG_A,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
+/* 0x88 */ {ADC,   REG_A,  REG_B,  0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x89 */ {ADC,   REG_A,  REG_C,  0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x8a */ {ADC,   REG_A,  REG_D,  0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x8b */ {ADC,   REG_A,  REG_E,  0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x8c */ {ADC,   REG_A,  REG_H,  0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x8d */ {ADC,   REG_A,  REG_L,  0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x8e */ {ADC,   REG_A,  MEM_HL, 0, 0,   1,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x8f */ {ADC,   REG_A,  REG_A,  0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
 /* 0x90 */ {SUB,   REG_A,  REG_B,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
 /* 0x91 */ {SUB,   REG_A,  REG_C,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
 /* 0x92 */ {SUB,   REG_A,  REG_D,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
@@ -154,14 +154,14 @@ gb_instruction inst_table[] = {
 /* 0x95 */ {SUB,   REG_A,  REG_L,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
 /* 0x96 */ {SUB,   REG_A,  MEM_HL, 0, 0,   1,     2, 2,   INST_FLAG_AFFECTS_CC},
 /* 0x97 */ {SUB,   REG_A,  REG_A,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
-/* 0x98 */ {SBC,   REG_A,  REG_B,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
-/* 0x99 */ {SBC,   REG_A,  REG_C,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
-/* 0x9a */ {SBC,   REG_A,  REG_D,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
-/* 0x9b */ {SBC,   REG_A,  REG_E,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
-/* 0x9c */ {SBC,   REG_A,  REG_H,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
-/* 0x9d */ {SBC,   REG_A,  REG_L,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
-/* 0x9e */ {SBC,   REG_A,  MEM_HL, 0, 0,   1,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0x9f */ {SBC,   REG_A,  REG_A,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
+/* 0x98 */ {SBC,   REG_A,  REG_B,  0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x99 */ {SBC,   REG_A,  REG_C,  0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x9a */ {SBC,   REG_A,  REG_D,  0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x9b */ {SBC,   REG_A,  REG_E,  0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x9c */ {SBC,   REG_A,  REG_H,  0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x9d */ {SBC,   REG_A,  REG_L,  0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x9e */ {SBC,   REG_A,  MEM_HL, 0, 0,   1,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x9f */ {SBC,   REG_A,  REG_A,  0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
 /* 0xa0 */ {AND,   REG_A,  REG_B,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
 /* 0xa1 */ {AND,   REG_A,  REG_C,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
 /* 0xa2 */ {AND,   REG_A,  REG_D,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
@@ -208,7 +208,7 @@ gb_instruction inst_table[] = {
 /* 0xcb */ {ERROR, NONE,   NONE,   0, 0,   0,     0, 0,   0},
 /* 0xcc */ {CALL,  CC_Z,   IMM16,  0, 0,   3,     6, 3,   INST_FLAG_USES_CC},
 /* 0xcd */ {CALL,  NONE,   IMM16,  0, 0,   3,     6, 6,   INST_FLAG_ENDS_BLOCK},
-/* 0xce */ {ADC,   REG_A,  IMM8,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
+/* 0xce */ {ADC,   REG_A,  IMM8,   0, 0,   2,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
 /* 0xcf */ {RST,   NONE,   MEM_0x08, 0, 0, 1,     4, 4,   INST_FLAG_ENDS_BLOCK},
 /* 0xd0 */ {RET,   CC_NC,  NONE,   0, 0,   1,     5, 2,   INST_FLAG_USES_CC},
 /* 0xd1 */ {POP,   REG_DE, NONE,   0, 0,   1,     3, 3,   0},
@@ -224,7 +224,7 @@ gb_instruction inst_table[] = {
 /* 0xdb */ {ERROR, NONE,   NONE,   0, 0,   0,     0, 0,   0},
 /* 0xdc */ {CALL,  CC_C,   IMM16,  0, 0,   3,     6, 3,   INST_FLAG_USES_CC},
 /* 0xdd */ {ERROR, NONE,   NONE,   0, 0,   0,     0, 0,   0},
-/* 0xde */ {SBC,   REG_A,  IMM8,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
+/* 0xde */ {SBC,   REG_A,  IMM8,   0, 0,   2,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
 /* 0xdf */ {RST,   NONE,   MEM_0x18, 0, 0, 1,     4, 4,   INST_FLAG_ENDS_BLOCK},
 /* 0xe0 */ {LD,    MEM_8,  REG_A,  0, 0,   2,     3, 3,   0},
 /* 0xe1 */ {POP,   REG_HL, NONE,   0, 0,   1,     3, 3,   0},
@@ -525,13 +525,17 @@ bool optimize_cc(gb_instruction* inst, int n) {
     
     for(int i = n-1; i >= 0; --i) {
         if(inst[i].flags & INST_FLAG_AFFECTS_CC) {
+            if(inst[i].flags & INST_FLAG_USES_CC) {
+                preserve_cc = true;
+            }
+            //preserve_cc = false;
             continue;
         }
-        
+
         if(preserve_cc) {
             inst[i].flags |= INST_FLAG_PRESERVE_CC;
         }
-
+        
         if(inst[i].flags & INST_FLAG_USES_CC) {
             preserve_cc = true;
         }
@@ -553,6 +557,19 @@ bool optimize_cc(gb_instruction* inst, int n) {
             inst[i].flags |= INST_FLAG_SAVE_CC;
             flags_saved = true;
         }
+
+        if(!flags_saved && i != n-1
+            && (inst[i+1].flags & INST_FLAG_PRESERVE_CC)
+            && (inst[i].flags & INST_FLAG_AFFECTS_CC))
+        {
+            inst[i].flags |= INST_FLAG_SAVE_CC;
+            flags_saved = true;
+        }
+
+        //if(!flags_saved && i == n-1) {
+        //    inst[i].flags |= INST_FLAG_SAVE_CC;
+        //    flags_saved = true;
+        //}
     }
     
     return true;
@@ -560,6 +577,7 @@ bool optimize_cc(gb_instruction* inst, int n) {
 
 // compiles block starting at start_address to gb_block
 bool compile(gb_block *block, gb_memory *mem, uint16_t start_address) {
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "compile new block @%#x\n", start_address);
     gb_instruction instructions[100];
     int n = 0;
     
@@ -577,11 +595,15 @@ bool compile(gb_block *block, gb_memory *mem, uint16_t start_address) {
         instructions[n].address = i;
         i += instructions[n].bytes;
         
+        if(instructions[n].opcode == DAA) {
+            printf("daa @%#x\n", instructions[n].address);
+        }
+        
         if(instructions[n].opcode == ERROR) {
             printf("Invalid Opcode! (%#x)\n", opcode);
             return false;
         } else {
-            LOG_DEBUG("inst: %i @%#x\n", instructions[n].opcode, instructions[n].address);
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "inst: %i @%#x\n", instructions[n].opcode, instructions[n].address);
         }
         
         if(instructions[n].flags & INST_FLAG_ENDS_BLOCK || n >= 99) {

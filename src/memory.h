@@ -40,6 +40,7 @@ typedef struct {
     uint8_t a, b, c, d, e, h, l;
     uint16_t _sp;
     uint16_t pc;
+    uint64_t flags;
     
     uint16_t last_pc;
 

@@ -2,6 +2,7 @@
 #define DYNASMGB_INSTRUCTIONS_H
 
 #include <stdio.h>
+#include <SDL2/SDL.h>
 #include "emit.h"
 
 // compiles block starting at start_address to gb_block

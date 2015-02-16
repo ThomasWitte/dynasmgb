@@ -627,76 +627,92 @@ bool inst_srl(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 bool inst_daa(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 // source: http://stackoverflow.com/questions/8119577/z80-daa-instruction
 	| print "DAA"
-	| pushf
-	| pop tmp1w
-	| test tmp1w, 0x1
+	| pushfq
+	| pop tmp3
+	| test tmp3w, 0x1   // CARRY FLAG
 	| jz >1
-	| test tmp1w, 0x10
+	| test tmp3w, 0x10  // HALF CARRY
 	| jz >3
 // CF=1, AF=1
+    | or tmp3, 0x1
 	| cmp A, 0x65
-	| jg >5
-	| add A, 0x34
+	| jl >5
+	| add A, 0x9a
+	| jmp >2
 	| 5:
 	| add A, 0x66
-	| jp >2
+	| jmp >2
 	| 3:
 // CF=1, AF=0
+    | or tmp3, 0x1
     | mov tmp1b, A
-    | and tmp1b, 0x0f
-    | cmp tmp1b, 0x0a
+    | mov tmp2b, A
+    | and tmp1, 0x0f
+    | cmp tmp1, 0x0a
     | jl >6
     | add A, 0x06
     | 6:
-    | mov tmp1b, A
-    | and tmp1b, 0xf0
-    | cmp tmp1b, 0x30
+    | and tmp2, 0xf0
+    | shr tmp2, 4
+    | cmp tmp2, 0x3
     | jl >6
     | add A, 0xA0
-	| jp >2
+	| jmp >2
     | 6:
 	| add A, 0x60
-	| jp >2
+	| jmp >2
 	| 1:
-	| test tmp1w, 0x10
+	| test tmp3w, 0x10
 	| jz >4
 // CF=0, AF=1
+    | and tmp3, ~0x1
     | mov tmp1b, A
-    | and tmp1b, 0x0f
-    | cmp tmp1b, 0x05
+    | mov tmp2b, A
+    | and tmp1, 0x0f
+    | cmp tmp1, 0x05
     | jl >6
-    | add A, 0xFA
-	| jp >2
+    | add A, 0xfa
+	| jmp >2
     | 6:
-    | mov tmp1b, A
-    | and tmp1b, 0xf0
-    | cmp tmp1b, 0xa0
+    | and tmp2, 0xf0
+    | shr tmp2, 4
+    | cmp tmp2, 0xa
     | jl >6
+    | or tmp3, 0x1
     | add A, 0x66
-	| jp >2
+	| jmp >2
     | 6:
 	| add A, 0x06
-	| jp >2
+	| jmp >2
 	| 4:
 // CF=0, AF=0
+    | and tmp3, ~0x1
     | mov tmp1b, A
-    | and tmp1b, 0x0f
-    | cmp tmp1b, 0x09
-    | jg >6
+    | mov tmp2b, A
+    | and tmp2, 0xf0
+    | shr tmp2, 4
+    | and tmp1, 0x0f
+    | cmp tmp1, 0x0a
+    | jl >6
     | add A, 0x06
-	| mov tmp1b, A
-    | and tmp1b, 0xf0
-    | cmp tmp1b, 0x90
+    | cmp tmp2, 0x9
 	| jne >6
+	| or tmp3, 0x1
 	| add A, 0x60
-	| jp >2
+	| jmp >2
     | 6:
-	| mov tmp1b, A
-    | and tmp1b, 0xf0
-    | cmp tmp1b, 0xa0
+    | cmp tmp2, 0xa
 	| jl >2
+	| or tmp3, 0x1
 	| add A, 0x60
 	| 2:
+	| and tmp3, ~0x50 // reset zero and hc flag
+	| cmp A, 0
+	| jne >1
+	| or tmp3, 0x40 // set zero flag
+	| 1:
+	| push tmp3
+	| popfq
 	*cycles += inst->cycles;
 	return true;
 }

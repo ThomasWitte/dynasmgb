@@ -22,6 +22,8 @@ bool init_vm(gb_vm *vm, const char *filename) {
     vm->state._sp = 0xfffe;
     vm->state.pc = 0x100;
     
+    vm->state.flags = 0x0;
+    
     vm->state.inst_count = 0;
     vm->state.ly_count = 0;
     vm->state.tima_count = 0;
@@ -88,6 +90,7 @@ bool run_vm(gb_vm *vm) {
                vm->compiled_blocks[0][vm->state.pc].exec_count);
         vm->compiled_blocks[0][vm->state.pc].exec_count++;
         vm->state.pc = vm->compiled_blocks[0][vm->state.pc].func(&vm->state);
+//        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "finished\n");
     } else if(vm->state.pc < 0x8000) { // execute function in rom
         uint8_t bank = vm->memory.current_rom_bank;
         if(vm->compiled_blocks[bank][vm->state.pc-0x4000].exec_count == 0) {

@@ -27,6 +27,33 @@
 	| popfq
 |.endmacro
 
+|.macro print2, text
+    | pushfq
+	| push r0
+	| push r1
+	| push r2
+	| push r6
+	| push r7
+	| push r8
+	| push r9
+	| push r10
+	| push r11
+	| mov rArg1, text
+	| mov rax, &puts
+	| call rax
+	| .nop 1
+	| pop r11
+	| pop r10
+	| pop r9
+	| pop r8
+	| pop r7
+	| pop r6
+	| pop r2
+	| pop r1
+	| pop r0
+	| popfq
+|.endmacro
+
 |.if DEBUG
 |.macro print, text
     | pushfq
@@ -183,10 +210,15 @@ void printhex(uint64_t addr) {
     | mov SP, state->_sp
 	| mov tmp1, state->mem
     | mov aMem, [tmp1 + offsetof(gb_memory, mem)]
+    | mov tmp2, state->flags
+    | push tmp2
+    | popfq
 |.endmacro
 	
 |.macro return, addr
-//    | popfq
+    | pushfq
+    | pop tmp2
+    | mov state->flags, tmp2
     | mov state->a, A
     | mov state->b, B
     | mov state->c, C
