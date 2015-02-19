@@ -72,6 +72,12 @@ bool init_vm(gb_vm *vm, const char *filename) {
 
     // init lcd
     vm->win = init_window();
+    if(!vm->win)
+        return false;
+
+    // init sound
+    if(!init_sound(&vm->sound, &vm->memory))
+        return false;
 
 	return true;
 }
@@ -175,6 +181,9 @@ bool free_vm(gb_vm *vm) {
 	    for(int i = 0; i < 0x4000; ++i)
             if(vm->compiled_blocks[block][i].exec_count > 0)
 	            free_block(&vm->compiled_blocks[block][i]);
+
+    // destroy sound
+    deinit_sound(&vm->sound);
 
     // destroy window
     deinit_window(vm->win);

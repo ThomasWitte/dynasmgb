@@ -595,10 +595,6 @@ bool compile(gb_block *block, gb_memory *mem, uint16_t start_address) {
         instructions[n].address = i;
         i += instructions[n].bytes;
         
-        if(instructions[n].opcode == DAA) {
-            printf("daa @%#x\n", instructions[n].address);
-        }
-        
         if(instructions[n].opcode == ERROR) {
             printf("Invalid Opcode! (%#x)\n", opcode);
             return false;

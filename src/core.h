@@ -10,10 +10,12 @@
 #include "interrupt.h"
 #include "lcd.h"
 #include "memory_inspector.h"
+#include "sound.h"
 
 typedef struct {
     gb_state state;
     gb_memory memory;
+    gb_sound sound;
     gb_block compiled_blocks[4][0x4000]; // bank, start address
     SDL_Window *win;
 } gb_vm;
