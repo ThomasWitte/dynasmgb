@@ -563,28 +563,28 @@ bool inst_res(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 
 bool inst_rr(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | print "RR"
-    | inst2, ror, inst->op1, 1
+    | inst2, rcr, inst->op1, 1
     *cycles += inst->cycles;
     return true;
 }
 
 bool inst_rl(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | print "RL"
-    | inst2, rol, inst->op1, 1
+    | inst2, rcl, inst->op1, 1
     *cycles += inst->cycles;
     return true;
 }
 
 bool inst_rrc(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | print "RRC"
-    | inst2, rcr, inst->op1, 1
+    | inst2, ror, inst->op1, 1
     *cycles += inst->cycles;
     return true;
 }
 
 bool inst_rlc(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | print "RLC"
-    | inst2, rcl, inst->op1, 1
+    | inst2, rol, inst->op1, 1
     *cycles += inst->cycles;
     return true;
 }
@@ -817,6 +817,7 @@ bool emit(gb_block *block, gb_instruction *inst, int n) {
     for(int i = 0; i <= n; ++i) {
         if(inst[i].flags & INST_FLAG_RESTORE_CC) {
             | popfq
+            | pushfq
         }
 
         switch(inst[i].opcode) {
@@ -978,6 +979,7 @@ bool emit(gb_block *block, gb_instruction *inst, int n) {
         }
 
         if(inst[i].flags & INST_FLAG_SAVE_CC) {
+            | pop tmp1
             | pushfq
         }
     }

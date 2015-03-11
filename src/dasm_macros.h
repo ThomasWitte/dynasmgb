@@ -212,11 +212,11 @@ void printhex(uint64_t addr) {
     | mov aMem, [tmp1 + offsetof(gb_memory, mem)]
     | mov tmp2, state->flags
     | push tmp2
-    | popfq
+//    | popfq
 |.endmacro
 	
 |.macro return, addr
-    | pushfq
+//    | pushfq
     | pop tmp2
     | mov state->flags, tmp2
     | mov state->a, A

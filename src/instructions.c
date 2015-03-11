@@ -25,7 +25,7 @@ gb_instruction inst_table[] = {
 /* 0x14 */ {INC,   REG_D,  NONE,   0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
 /* 0x15 */ {DEC,   REG_D,  NONE,   0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
 /* 0x16 */ {LD,    REG_D,  IMM8,   0, 0,   2,     2, 2,   0},
-/* 0x17 */ {RL,    REG_A,  NONE,   0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
+/* 0x17 */ {RL,    REG_A,  NONE,   0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
 /* 0x18 */ {JR,    NONE,   IMM8,   0, 0,   2,     3, 3,   INST_FLAG_ENDS_BLOCK},
 /* 0x19 */ {ADD16, REG_HL, REG_DE, 0, 0,   1,     2, 2,   INST_FLAG_AFFECTS_CC},
 /* 0x1a */ {LD,    REG_A,  MEM_DE, 0, 0,   1,     2, 2,   0},
@@ -33,7 +33,7 @@ gb_instruction inst_table[] = {
 /* 0x1c */ {INC,   REG_E,  NONE,   0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
 /* 0x1d */ {DEC,   REG_E,  NONE,   0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
 /* 0x1e */ {LD,    REG_E,  IMM8,   0, 0,   2,     2, 2,   0},
-/* 0x1f */ {RR,    REG_A,  NONE,   0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
+/* 0x1f */ {RR,    REG_A,  NONE,   0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
 /* 0x20 */ {JR,    CC_NZ,  IMM8,   0, 0,   2,     3, 2,   INST_FLAG_USES_CC},
 /* 0x21 */ {LD16,  REG_HL, IMM16,  0, 0,   3,     3, 3,   0},
 /* 0x22 */ {LD,    MEM_INC_HL, REG_A, 0,0, 1,     2, 2,   0},
@@ -278,22 +278,22 @@ gb_instruction cb_table[] = {
 /* 0x0d */ {RRC,   REG_L,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
 /* 0x0e */ {RRC,   MEM_HL, NONE,   0, 0,   2,     4, 4,   INST_FLAG_AFFECTS_CC},
 /* 0x0f */ {RRC,   REG_A,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0x10 */ {RL,    REG_B,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0x11 */ {RL,    REG_C,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0x12 */ {RL,    REG_C,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0x13 */ {RL,    REG_E,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0x14 */ {RL,    REG_H,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0x15 */ {RL,    REG_L,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0x16 */ {RL,    MEM_HL, NONE,   0, 0,   2,     4, 4,   INST_FLAG_AFFECTS_CC},
-/* 0x17 */ {RL,    REG_A,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0x18 */ {RR,    REG_B,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0x19 */ {RR,    REG_C,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0x1a */ {RR,    REG_C,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0x1b */ {RR,    REG_E,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0x1c */ {RR,    REG_H,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0x1d */ {RR,    REG_L,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
-/* 0x1e */ {RR,    MEM_HL, NONE,   0, 0,   2,     4, 4,   INST_FLAG_AFFECTS_CC},
-/* 0x1f */ {RR,    REG_A,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
+/* 0x10 */ {RL,    REG_B,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x11 */ {RL,    REG_C,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x12 */ {RL,    REG_C,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x13 */ {RL,    REG_E,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x14 */ {RL,    REG_H,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x15 */ {RL,    REG_L,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x16 */ {RL,    MEM_HL, NONE,   0, 0,   2,     4, 4,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x17 */ {RL,    REG_A,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x18 */ {RR,    REG_B,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x19 */ {RR,    REG_C,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x1a */ {RR,    REG_C,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x1b */ {RR,    REG_E,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x1c */ {RR,    REG_H,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x1d */ {RR,    REG_L,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x1e */ {RR,    MEM_HL, NONE,   0, 0,   2,     4, 4,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
+/* 0x1f */ {RR,    REG_A,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
 /* 0x20 */ {SLA,   REG_B,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
 /* 0x21 */ {SLA,   REG_C,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
 /* 0x22 */ {SLA,   REG_C,  NONE,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
@@ -521,7 +521,7 @@ gb_instruction cb_table[] = {
 };
 
 bool optimize_cc(gb_instruction* inst, int n) {
-    bool preserve_cc = false;
+/*    bool preserve_cc = false;
     
     for(int i = n-1; i >= 0; --i) {
         if(inst[i].flags & INST_FLAG_AFFECTS_CC) {
@@ -565,11 +565,16 @@ bool optimize_cc(gb_instruction* inst, int n) {
             inst[i].flags |= INST_FLAG_SAVE_CC;
             flags_saved = true;
         }
-
-        //if(!flags_saved && i == n-1) {
-        //    inst[i].flags |= INST_FLAG_SAVE_CC;
-        //    flags_saved = true;
-        //}
+    }*/
+    
+    for(int i = 0; i < n; ++i) {
+        if(inst[i].flags & INST_FLAG_AFFECTS_CC) {
+            inst[i].flags |= INST_FLAG_SAVE_CC;
+        }
+        
+        if(inst[i].flags & INST_FLAG_USES_CC) {
+            inst[i].flags |= INST_FLAG_RESTORE_CC;
+        }
     }
     
     return true;
