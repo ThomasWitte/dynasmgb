@@ -217,6 +217,9 @@ bool inst_ld16(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
         if(inst->op2 == IMM16) {
             | mov H, inst->args[2];
             | mov L, inst->args[1];
+        } else if(inst->op2 == MEM_8) {
+            | mov H, [aMem + xSP + inst->args[1] + 1]
+            | mov L, [aMem + xSP + inst->args[1]]
         } else {
             printf("Invalid 2nd operand to LD16\n");
             return false;
@@ -225,6 +228,11 @@ bool inst_ld16(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     case REG_SP:
         if(inst->op2 == IMM16) {
             | mov SP, (uint16_t)(inst->args[1] + 256*inst->args[2]);
+        } else if(inst->op2 == REG_HL) {
+            | mov xSP, xH
+            | shl xSP, 8
+            | and xL, 0xff
+            | or xSP, xL
         } else {
             printf("Invalid 2nd operand to LD16\n");
             return false;
