@@ -7,6 +7,10 @@ OBJ = core.o instructions.o lcd.o memory.o emit.o interrupt.o main.o memory_insp
 
 all: $(BIN)
 
+debug: CFLAGS += -D DEBUG -D DEBUG_CG
+debug: DYNASMFLAGS += -D DEBUG -D DEBUG_CG
+debug: all
+
 debug_cg: CFLAGS += -D DEBUG_CG
 debug_cg: DYNASMFLAGS += -D DEBUG_CG
 debug_cg: $(BIN)
