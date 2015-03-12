@@ -145,6 +145,7 @@ int main(int argc, char *argv[]) {
                 case SDLK_d: // enter debugging
                     if(debug_mode) {
                         debug_mode = false;
+                        vm.next_frame_time = SDL_GetTicks() + 17;
                         SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
                                            SDL_LOG_PRIORITY_ERROR);
 

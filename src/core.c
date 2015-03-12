@@ -71,11 +71,14 @@ bool init_vm(gb_vm *vm, const char *filename) {
 	    }
 
     // init lcd
-    vm->win = init_window();
-    if(!vm->win)
+    if(!init_window(&vm->lcd))
         return false;
 
     vm->draw_frame = true;
+    vm->next_frame_time = SDL_GetTicks();
+    vm->time_busy = 0;
+    vm->last_time = 0;
+    vm->frame_cnt = 0;
 
     // init sound
     if(!init_sound(&vm->sound, &vm->memory))
@@ -85,6 +88,7 @@ bool init_vm(gb_vm *vm, const char *filename) {
 }
 
 bool run_vm(gb_vm *vm) {
+    bool mutex_locked = true;
     uint16_t prev_pc = vm->state.last_pc;
     vm->state.last_pc = vm->state.pc;
 
@@ -140,9 +144,36 @@ bool run_vm(gb_vm *vm) {
         // check interrupts
         update_ioregs(&vm->state);
 
+        if(vm->memory.mem[0xff44] == 152 && !mutex_locked) {
+            SDL_LockMutex(vm->lcd.vblank_mutex);
+            mutex_locked = true;
+        }
+
         if(vm->memory.mem[0xff44] == 144) {
             if(vm->draw_frame) {
-                render_frame(vm->win);
+                unsigned time = SDL_GetTicks();
+                if(!SDL_TICKS_PASSED(time, vm->next_frame_time)) {
+                    SDL_Delay(vm->next_frame_time - time);
+                }
+                
+                vm->time_busy += time - vm->last_time;
+                vm->last_time = SDL_GetTicks();
+                
+                if(++(vm->frame_cnt) == 60) {
+                    vm->frame_cnt = 0;
+                    float load = (vm->time_busy) / (60*17.0);
+                    char title[15];
+                    sprintf(title, "load: %.2f", load);
+                    SDL_SetWindowTitle(vm->lcd.win, title);
+                    vm->time_busy = 0;
+                }
+                
+                vm->next_frame_time += 17; // 17ms until next frame
+                //render_frame(&vm->lcd);
+                SDL_CondBroadcast(vm->lcd.vblank_cond);
+                SDL_UnlockMutex(vm->lcd.vblank_mutex);
+                mutex_locked = false;
+                                
                 vm->draw_frame = false;
             }
         } else {
@@ -199,7 +230,7 @@ bool free_vm(gb_vm *vm) {
     deinit_sound(&vm->sound);
 
     // destroy window
-    deinit_window(vm->win);
+    deinit_window(&vm->lcd);
 
     return gb_memory_free(&vm->memory);
 }

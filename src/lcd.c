@@ -73,29 +73,60 @@ render_back(uint32_t *buf, uint8_t* addr_sp)
     }
 }
 
-SDL_Window *init_window() {
+int render_thread_function(void *ptr) {
+    gb_lcd* lcd = (gb_lcd*) ptr;
+
     SDL_Init(SDL_INIT_VIDEO);
     
-    SDL_Window *win = SDL_CreateWindow(
+    lcd->win = SDL_CreateWindow(
         "dynasmgb",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
-        160, 144, SDL_WINDOW_OPENGL);
+        160*3, 144*3, SDL_WINDOW_OPENGL);
     
-    if(!win) {
+    if(!lcd->win) {
         printf("Could not create window!\n");
-        exit(-1);
+        return false;
     }
     
-    SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+    SDL_CreateRenderer(lcd->win, -1, SDL_RENDERER_ACCELERATED);
+
+    SDL_LockMutex(lcd->vblank_mutex);
+    while(!lcd->exit) {
+        SDL_CondWait(lcd->vblank_cond, lcd->vblank_mutex);
+        render_frame(lcd);
+    }
+    SDL_UnlockMutex(lcd->vblank_mutex);
     
-    return win;
+    SDL_Renderer *renderer = SDL_GetRenderer(lcd->win);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(lcd->win);
+    
+    return 0;
 }
 
-void deinit_window(SDL_Window *win) {
-    SDL_Renderer *renderer = SDL_GetRenderer(win);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(win);
+bool init_window(gb_lcd* lcd) {
+    lcd->vblank_mutex = SDL_CreateMutex();
+    lcd->vblank_cond = SDL_CreateCond();
+    
+    lcd->exit = false;
+    
+    lcd->thread = SDL_CreateThread(render_thread_function, "Render Thread", (void*)lcd);
+    
+    SDL_LockMutex(lcd->vblank_mutex);
+        
+    return true;
+}
+
+void deinit_window(gb_lcd* lcd) {
+    lcd->exit = true;
+    SDL_CondBroadcast(lcd->vblank_cond);
+    
+    SDL_WaitThread(lcd->thread, 0);
+    
+    SDL_DestroyCond(lcd->vblank_cond);
+    SDL_DestroyMutex(lcd->vblank_mutex);
+    
     SDL_Quit();
 }
 
@@ -105,8 +136,8 @@ void update_line(uint8_t *mem) {
     render_back(imgbuf, mem);
 }
 
-void render_frame(SDL_Window *win) {
-    SDL_Renderer *renderer = SDL_GetRenderer(win);
+void render_frame(gb_lcd* lcd) {
+    SDL_Renderer *renderer = SDL_GetRenderer(lcd->win);
     static SDL_Texture *bitmapTex = NULL;
     if(!bitmapTex) {
         bitmapTex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, 160, 144);

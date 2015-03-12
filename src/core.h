@@ -17,8 +17,13 @@ typedef struct {
     gb_memory memory;
     gb_sound sound;
     gb_block compiled_blocks[4][0x4000]; // bank, start address
-    SDL_Window *win;
+    gb_lcd lcd;
     bool draw_frame;
+    unsigned next_frame_time;
+    
+    int frame_cnt;
+    unsigned time_busy;
+    unsigned last_time;
 } gb_vm;
 
 void free_block(gb_block *block);
