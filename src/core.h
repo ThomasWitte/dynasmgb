@@ -18,6 +18,7 @@ typedef struct {
     gb_sound sound;
     gb_block compiled_blocks[4][0x4000]; // bank, start address
     SDL_Window *win;
+    bool draw_frame;
 } gb_vm;
 
 void free_block(gb_block *block);

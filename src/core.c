@@ -75,6 +75,8 @@ bool init_vm(gb_vm *vm, const char *filename) {
     if(!vm->win)
         return false;
 
+    vm->draw_frame = true;
+
     // init sound
     if(!init_sound(&vm->sound, &vm->memory))
         return false;
@@ -96,7 +98,7 @@ bool run_vm(gb_vm *vm) {
                vm->compiled_blocks[0][vm->state.pc].exec_count);
         vm->compiled_blocks[0][vm->state.pc].exec_count++;
         vm->state.pc = vm->compiled_blocks[0][vm->state.pc].func(&vm->state);
-//        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "finished\n");
+        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "finished\n");
     } else if(vm->state.pc < 0x8000) { // execute function in rom
         uint8_t bank = vm->memory.current_rom_bank;
         if(vm->compiled_blocks[bank][vm->state.pc-0x4000].exec_count == 0) {
@@ -107,12 +109,14 @@ bool run_vm(gb_vm *vm) {
                vm->compiled_blocks[bank][vm->state.pc-0x4000].exec_count);
         vm->compiled_blocks[bank][vm->state.pc-0x4000].exec_count++;
         vm->state.pc = vm->compiled_blocks[bank][vm->state.pc-0x4000].func(&vm->state);
+        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "finished\n");
     } else { // execute function in ram
         gb_block temp = {0};
         if(!compile(&temp, &vm->memory, vm->state.pc))
             goto compile_error;
         SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "execute function in ram\n");
         vm->state.pc = temp.func(&vm->state);
+        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "finished\n");
         free_block(&temp);
     }
     
@@ -136,6 +140,15 @@ bool run_vm(gb_vm *vm) {
         // check interrupts
         update_ioregs(&vm->state);
 
+        if(vm->memory.mem[0xff44] == 144) {
+            if(vm->draw_frame) {
+                render_frame(vm->win);
+                vm->draw_frame = false;
+            }
+        } else {
+            vm->draw_frame = true;
+        }
+
         uint16_t interrupt_addr = start_interrupt(&vm->state);
         if(interrupt_addr) {
 #ifdef DEBUG_CG
@@ -151,9 +164,9 @@ bool run_vm(gb_vm *vm) {
             // jump to interrupt address
             vm->state.pc = interrupt_addr;
 
-            if(interrupt_addr == 0x40) { // VBLANK interrupt
-                render_frame(vm->win);
-            }
+            //if(interrupt_addr == 0x40) { // VBLANK interrupt
+            //    render_frame(vm->win);
+            //}
         }
         
         if(vm->state.halt) {

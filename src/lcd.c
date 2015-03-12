@@ -26,7 +26,7 @@ render_back(uint32_t *buf, uint8_t* addr_sp)
 	/* Advance to row in tile map */
 	ptr_map += ((y>>3)<<5)&0x3ff;
 	
-	i=y*160; //0;
+	i=addr_sp[0xff44]*160; //0;
 	j &= 7;
 	x = 8-j;
 	shftr=((uint8_t)(~j))%8; // shift factor
@@ -38,7 +38,7 @@ render_back(uint32_t *buf, uint8_t* addr_sp)
 		ptr_data+=(y&7)<<1; // point to row in tile depending on LY and SCROLL Y; each row is 8*2=16 bits=2 bytes
 		for (; j<8 && (x+j)<168; shftr--, j++) {
 			indx = ((ptr_data[0]>>shftr)&1)|((((ptr_data[1]>>shftr))&1)<<1);
-			buf[i] = pal_grey[(addr_sp[0xff47]>>(indx<<1))&3];
+            buf[i] = pal_grey[(addr_sp[0xff47]>>(indx<<1))&3];
 			//back_col[i][addr_sp[0xff44]]=indx;
 			i++;
 		}
