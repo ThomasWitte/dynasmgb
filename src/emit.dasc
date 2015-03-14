@@ -238,6 +238,15 @@ bool inst_ld16(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
             return false;
         }
         break;
+    case MEM_16:
+        if(inst->op2 == REG_SP) {
+			uint16_t addr = (uint16_t)(inst->args[1] + 256*inst->args[2]);
+            | mov word [aMem + addr], SP;
+        } else {
+            printf("Invalid 2nd operand to LD16\n");
+            return false;
+        }
+        break;
     default:
         printf("Invalid 1st operand to LD16: %i\n", inst->op1);
         return false;
@@ -250,10 +259,28 @@ bool inst_push(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | print "PUSH"
     switch(inst->op1) {
     case REG_AF:
+		| pushfq
+		| pop tmp1
+		| mov tmp3, 0
+		// CF
+		| mov tmp2, tmp1
+		| and tmp2, 0x1
+		| shl tmp2, 4
+		| or tmp3, tmp2
+		// AF, ZF
+		| mov tmp2, tmp1
+		| and tmp2, 0x50
+		| shl tmp2, 1
+		| or tmp3, tmp2
+		// SF
+		| mov tmp2, tmp1
+		| and tmp2, 0x80
+		| shr tmp2, 1
+		| or tmp3, tmp2
         | dec SP
         | dec SP
         | mov [aMem + xSP + 1], A
-        | mov byte [aMem + xSP], 0
+        | mov [aMem + xSP], tmp3b
         break;
     case REG_BC:
         | dec SP
@@ -286,8 +313,29 @@ bool inst_pop(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     switch(inst->op1) {
     case REG_AF:
         | mov A, [aMem + xSP + 1]
+		| mov tmp1b, [aMem + xSP]
         | inc SP
         | inc SP
+		| pushfq
+		| pop tmp3
+		| and tmp3, ~0xD1
+		// CF
+		| mov tmp2, tmp1
+		| and tmp2, 0x10
+		| shr tmp2, 4
+		| or tmp3, tmp2
+		// AF, ZF
+		| mov tmp2, tmp1
+		| and tmp2, 0xA0
+		| shr tmp2, 1
+		| or tmp3, tmp2
+		// SF
+		| mov tmp2, tmp1
+		| and tmp2, 0x40
+		| shl tmp2, 1
+		| or tmp3, tmp2
+		| push tmp3
+		| popfq
         break;
     case REG_BC:
         | mov B, [aMem + xSP + 1]
@@ -799,6 +847,16 @@ bool inst_halt(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     return true;
 }
 
+bool inst_stop(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+    | print "STOP"
+	// TODO: wake up if button pressed
+    *cycles += inst->cycles;
+    | mov byte state->halt, 1
+    | add qword state->inst_count, *cycles
+    | return inst->address
+    return true;
+}
+
 bool emit(gb_block *block, gb_instruction *inst, int n) {
     dasm_State* d;
     uint32_t npc = 4;
@@ -835,6 +893,10 @@ bool emit(gb_block *block, gb_instruction *inst, int n) {
             break;
         case HALT:
             if(!inst_halt(Dst, &inst[i], &cycles))
+                goto exit_fail;
+            break;
+        case STOP:
+            if(!inst_stop(Dst, &inst[i], &cycles))
                 goto exit_fail;
             break;
         case LD16:

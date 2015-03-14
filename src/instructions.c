@@ -234,7 +234,7 @@ gb_instruction inst_table[] = {
 /* 0xe5 */ {PUSH,  REG_HL, NONE,   0, 0,   1,     4, 4,   0},
 /* 0xe6 */ {AND,   REG_A,  IMM8,   0, 0,   2,     2, 2,   INST_FLAG_AFFECTS_CC},
 /* 0xe7 */ {RST,   NONE,   MEM_0x20, 0, 0, 1,     4, 4,   INST_FLAG_ENDS_BLOCK},
-/* 0xe8 */ {ADD16, REG_SP, MEM_8,  0, 0,   2,     4, 4,   INST_FLAG_AFFECTS_CC},
+/* 0xe8 */ {ADD16, REG_SP, IMM8,   0, 0,   2,     4, 4,   INST_FLAG_AFFECTS_CC},
 /* 0xe9 */ {JP,    NONE,   MEM_HL, 0, 0,   1,     1, 1,   INST_FLAG_ENDS_BLOCK},
 /* 0xea */ {LD,    MEM_16, REG_A,  0, 0,   3,     4, 4,   0},
 /* 0xeb */ {ERROR, NONE,   NONE,   0, 0,   0,     0, 0,   0},
