@@ -683,6 +683,8 @@ bool inst_srl(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 bool inst_daa(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 // source: http://stackoverflow.com/questions/8119577/z80-daa-instruction
 	| print "DAA"
+	| print2 "daa"
+	| debug_a64 xA
 	| pushfq
 	| pop tmp3
 	| test tmp3w, 0x1   // CARRY FLAG
@@ -690,9 +692,10 @@ bool inst_daa(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 	| test tmp3w, 0x10  // HALF CARRY
 	| jz >3
 // CF=1, AF=1
+| print2 "CF=1 AF=1"
     | or tmp3, 0x1
 	| cmp A, 0x65
-	| jl >5
+	| jg >5 // jl ??
 	| add A, 0x9a
 	| jmp >2
 	| 5:
@@ -700,6 +703,7 @@ bool inst_daa(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 	| jmp >2
 	| 3:
 // CF=1, AF=0
+| print2 "CF=1 AF=0"
     | or tmp3, 0x1
     | mov tmp1b, A
     | mov tmp2b, A
@@ -721,6 +725,7 @@ bool inst_daa(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 	| test tmp3w, 0x10
 	| jz >4
 // CF=0, AF=1
+| print2 "CF=0 AF=1"
     | and tmp3, ~0x1
     | mov tmp1b, A
     | mov tmp2b, A
@@ -742,6 +747,7 @@ bool inst_daa(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 	| jmp >2
 	| 4:
 // CF=0, AF=0
+| print2 "CF=0 AF=0"
     | and tmp3, ~0x1
     | mov tmp1b, A
     | mov tmp2b, A
@@ -769,6 +775,7 @@ bool inst_daa(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 	| 1:
 	| push tmp3
 	| popfq
+	| debug_a64 xA
 	*cycles += inst->cycles;
 	return true;
 }
