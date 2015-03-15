@@ -350,30 +350,36 @@ void printhex(uint64_t addr) {
     |          opcode A, [aMem + xC + 0xff00]
     ||         break;
     ||     case MEM_HL:
+    |          pushfq
     |          and xL, 0xff
     |          and xH, 0xff
     |          mov tmp2, xH
     |          shl tmp2, 8
     |          mov tmp1, xL
     |          add tmp1, tmp2
+    |          popfq
     |          opcode A, [aMem + tmp1]
     ||         break;
     ||     case MEM_BC:
+    |          pushfq
     |          and xC, 0xff
     |          and xB, 0xff
     |          mov tmp2, xB
     |          shl tmp2, 8
     |          mov tmp1, xC
     |          add tmp1, tmp2
+    |          popfq
     |          opcode A, [aMem + tmp1]
     ||         break;
     ||     case MEM_DE:
+    |          pushfq
     |          and xE, 0xff
     |          and xD, 0xff
     |          mov tmp2, xD
     |          shl tmp2, 8
     |          mov tmp1, xE
     |          add tmp1, tmp2
+    |          popfq
     |          opcode A, [aMem + tmp1]
     ||         break;
     ||     case MEM_16:
@@ -381,12 +387,14 @@ void printhex(uint64_t addr) {
     |          opcode A, [aMem + addr]
     ||         break; }
     ||     case MEM_DEC_HL:
+    |          pushfq
     |          and xL, 0xff
     |          and xH, 0xff
     |          mov tmp2, xH
     |          shl tmp2, 8
     |          mov tmp1, xL
     |          add tmp1, tmp2
+    |          popfq
     |          opcode A, [aMem+tmp1]
     |          dec tmp1
     |          mov L, tmp1b
@@ -394,12 +402,14 @@ void printhex(uint64_t addr) {
     |          mov H, tmp1b
     ||         break;
     ||     case MEM_INC_HL:
+    |          pushfq
     |          and xL, 0xff
     |          and xH, 0xff
     |          mov tmp2, xH
     |          shl tmp2, 8
     |          mov tmp1, xL
     |          add tmp1, tmp2
+    |          popfq
     |          opcode A, [aMem+tmp1]
     |          inc tmp1
     |          mov L, tmp1b
@@ -435,12 +445,14 @@ void printhex(uint64_t addr) {
     |          opcode B, L
     ||         break;
     ||     case MEM_HL:
+    |          pushfq
     |          and xL, 0xff
     |          and xH, 0xff
     |          mov tmp2, xH
     |          shl tmp2, 8
     |          mov tmp1, xL
     |          add tmp1, tmp2
+    |          popfq
     |          opcode B, [aMem + tmp1]
     ||         break;
     ||     case IMM8:
@@ -475,12 +487,14 @@ void printhex(uint64_t addr) {
     |          opcode C, L
     ||         break;
     ||     case MEM_HL:
+    |          pushfq
     |          and xL, 0xff
     |          and xH, 0xff
     |          mov tmp2, xH
     |          shl tmp2, 8
     |          mov tmp1, xL
     |          add tmp1, tmp2
+    |          popfq
     |          opcode C, [aMem + tmp1]
     ||         break;
     ||     case IMM8:
@@ -515,12 +529,14 @@ void printhex(uint64_t addr) {
     |          opcode D, L
     ||         break;
     ||     case MEM_HL:
+    |          pushfq
     |          and xL, 0xff
     |          and xH, 0xff
     |          mov tmp2, xH
     |          shl tmp2, 8
     |          mov tmp1, xL
     |          add tmp1, tmp2
+    |          popfq
     |          opcode D, [aMem + tmp1]
     ||         break;
     ||     case IMM8:
@@ -555,12 +571,14 @@ void printhex(uint64_t addr) {
     |          opcode E, L
     ||         break;
     ||     case MEM_HL:
+    |          pushfq
     |          and xL, 0xff
     |          and xH, 0xff
     |          mov tmp2, xH
     |          shl tmp2, 8
     |          mov tmp1, xL
     |          add tmp1, tmp2
+    |          popfq
     |          opcode E, [aMem + tmp1]
     ||         break;
     ||     case IMM8:
@@ -595,12 +613,14 @@ void printhex(uint64_t addr) {
     |          opcode H, L
     ||         break;
     ||     case MEM_HL:
+    |          pushfq
     |          and xL, 0xff
     |          and xH, 0xff
     |          mov tmp2, xH
     |          shl tmp2, 8
     |          mov tmp1, xL
     |          add tmp1, tmp2
+    |          popfq
     |          opcode H, [aMem + tmp1]
     ||         break;
     ||     case IMM8:
@@ -635,12 +655,14 @@ void printhex(uint64_t addr) {
     |          opcode L, L
     ||         break;
     ||     case MEM_HL:
+    |          pushfq
     |          and xL, 0xff
     |          and xH, 0xff
     |          mov tmp2, xH
     |          shl tmp2, 8
     |          mov tmp1, xL
     |          add tmp1, tmp2
+    |          popfq
     |          opcode L, [aMem + tmp1]
     ||         break;
     ||     case IMM8:
