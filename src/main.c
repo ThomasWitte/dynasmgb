@@ -3,6 +3,7 @@
 #include <execinfo.h>
 #include <unistd.h>
 #include "core.h"
+#include "savestate.h"
 
 void usage(const char *exe) {
     printf("usage: %s [-b BREAKPOINT] file.gb\n", exe);
@@ -182,6 +183,20 @@ int main(int argc, char *argv[]) {
                                            SDL_LOG_PRIORITY_VERBOSE);
 
                         memory_inspector_update(&inspector);
+                    }
+                    break;
+                case SDLK_F2: // save state
+                    if(savestate_save(&vm, "quicksave.dat")) {
+                        printf("quicksave.dat saved.\n");
+                    } else {
+                        printf("quicksave failed!\n");
+                    }
+                    break;
+                case SDLK_F3: // load state
+                    if(savestate_load(&vm, "quicksave.dat")) {
+                        printf("quicksave.dat loaded.\n");
+                    } else {
+                        printf("quickload failed!\n");
                     }
                     break;
                 case SDLK_ESCAPE:
