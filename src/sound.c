@@ -78,7 +78,9 @@ void audio_callback(void *userdata, int8_t *stream, int length) {
             memory[0xFF16] -= cnt_256hz;
         } else {
             memory[0xFF16] &= 0xc0;
-        }        freq[1] = 131072/(2048 - memory[0xFF18] - 256*(memory[0xFF19] & 0x07));
+        }
+        
+        freq[1] = 131072/(2048 - memory[0xFF18] - 256*(memory[0xFF19] & 0x07));
         
         if(sound->amplitude[1] && memory[0xFF17] & 0x07) { // envelope sweep active
         
@@ -133,8 +135,8 @@ void audio_callback(void *userdata, int8_t *stream, int length) {
         if(duty[i] == 0)
             duty[i] = 1;
     
-    int T[4] = {SAMPLE_FREQUENCY / freq[0],
-                SAMPLE_FREQUENCY / freq[1],
+    int T[4] = {SAMPLE_FREQUENCY / freq[0] ?: 1,
+                SAMPLE_FREQUENCY / freq[1] ?: 1,
                 SAMPLE_FREQUENCY / freq[2],
                 SAMPLE_FREQUENCY / freq[3] ?: 1};
     

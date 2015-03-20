@@ -15,6 +15,8 @@ void draw_tile(memory_inspector_t *inspector, uint16_t base_addr, int pos_x, int
 }
 
 void memory_inspector_init(memory_inspector_t *inspector, gb_memory *mem) {
+    SDL_Init(SDL_INIT_VIDEO);
+
     inspector->win = SDL_CreateWindow(
         "memory_inspector",
         SDL_WINDOWPOS_UNDEFINED,
@@ -44,10 +46,11 @@ void memory_inspector_update(memory_inspector_t *inspector) {
         draw_tile(inspector, 0x8800 + 16*i, 2 + tile_x*20, 182 + 20*tile_y, 2);
     }
 
+    int tile_table_address = inspector->mem->mem[0xff40]&0x10 ? 0x8000 : 0x9000;
     for(int i = 0; i < 32; ++i) {
         for(int j = 0; j < 32; ++j) {
-            int idx = inspector->mem->mem[0x9800 + 32*i + j];
-            draw_tile(inspector, 0x8000 + 16*idx, 100 + 8*j , 360 + 8*i, 1);
+            int idx = ((inspector->mem->mem[0xff40]&0x10) ? inspector->mem->mem[0x9800 + 32*i + j] : (int8_t)inspector->mem->mem[0x9800 + 32*i + j]);
+            draw_tile(inspector, tile_table_address + 16*idx, 100 + 8*j , 360 + 8*i, 1);
         }
     }
 

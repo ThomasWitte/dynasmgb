@@ -71,6 +71,16 @@ int main(int argc, char *argv[]) {
     bool debug_mode = false;
     memory_inspector_t inspector;
 
+    if(vm.state.pc == breakpoint) {
+        debug_mode = true;
+        SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
+                           SDL_LOG_PRIORITY_VERBOSE);
+
+        memory_inspector_init(&inspector, &vm.memory);
+        memory_inspector_update(&inspector);
+        printf("debugging enabled\n");
+    }
+
     // start emulation
     while(debug_mode || run_vm(&vm)) {
         if(vm.state.pc == breakpoint) {

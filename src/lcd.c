@@ -3,7 +3,7 @@
 void
 render_back(uint32_t *buf, uint8_t* addr_sp)
 {
-    int pal_grey[] = {0xffffff, 0xaaaaaa, 0x555555, 0x000000};
+    uint32_t pal_grey[] = {0xffffff, 0xaaaaaa, 0x555555, 0x000000};
 
 	int i, j;
 	uint8_t *ptr_data;
@@ -38,7 +38,8 @@ render_back(uint32_t *buf, uint8_t* addr_sp)
 		ptr_data+=(y&7)<<1; // point to row in tile depending on LY and SCROLL Y; each row is 8*2=16 bits=2 bytes
 		for (; j<8 && (x+j)<168; shftr--, j++) {
 			indx = ((ptr_data[0]>>shftr)&1)|((((ptr_data[1]>>shftr))&1)<<1);
-            buf[i] = pal_grey[(addr_sp[0xff47]>>(indx<<1))&3];
+			// if bit 0 in LCDC is not set, screen is blank
+            buf[i] = addr_sp[0xff40]&0x01 ? pal_grey[(addr_sp[0xff47]>>(indx<<1))&3] : (unsigned)-1;
 			//back_col[i][addr_sp[0xff44]]=indx;
 			i++;
 		}
@@ -46,26 +47,56 @@ render_back(uint32_t *buf, uint8_t* addr_sp)
 		shftr=7;
 	}
 
-    // TODO: support 8x16 sprites
+    if(addr_sp[0xff40] & 0x20) {
+        uint8_t wx = addr_sp[0xff4b]-7;
+        uint8_t wy = addr_sp[0xff4a];
+
+        int y = addr_sp[0xff44]; // current line to update
+        uint8_t *tile_map_ptr = addr_sp + (addr_sp[0xff40]&0x08 ? 0x9800 : 0x9c00) + (y-wy)/8 * 32;
+        uint8_t *tile_data_ptr = addr_sp + (addr_sp[0xff40]&0x10 ? 0x8000 : 0x9000);
+        int i = y*160;
+        
+        for(int x = 0; x < 160; ++x) {
+            if(x < wx || y < wy)
+                continue;
+        
+            uint8_t *tile = tile_data_ptr + 16*(addr_sp[0xff40]&0x10 ? tile_map_ptr[(x-wx)/8] : (int8_t)tile_map_ptr[(x-wx)/8]);
+            tile += (y-wy)%8 * 2;
+            
+            int col = ((*tile >> (7-(x-wx)%8)) & 1) + (((*(tile+1) >> (7-(x-wx)%8)) & 1) << 1);
+            
+            buf[i+x] = pal_grey[(addr_sp[0xff47]>>(col<<1))&3];
+        }
+    }
+
     // TODO: support sprite color palettes
     // TODO: support flags
     // TODO: sprite priorities
     if(addr_sp[0xff40] & 0x02) {
+        bool sprite_8x16_mode = addr_sp[0xff40] & 0x04 ? true : false;
         int y = addr_sp[0xff44]+addr_sp[0xff42];
-        int x_offset = addr_sp[0xff43];
         for(int sprite = 0; sprite < 40; ++sprite) {
-            int sposy = addr_sp[0xfe00 + 4*sprite] - 8;
-            int sposx = addr_sp[0xfe01 + 4*sprite] - 8 - addr_sp[0xff43];
-            uint8_t tile_idx = addr_sp[0xfe02 + 4*sprite];
+            int sposy = addr_sp[0xfe00 + 4*sprite] - 16;
+            int sposx = addr_sp[0xfe01 + 4*sprite] - 8;
+            
+            // TODO: support 8x16 sprites
+            uint8_t tile_idx = sprite_8x16_mode ? (addr_sp[0xfe02 + 4*sprite]|0x01) : addr_sp[0xfe02 + 4*sprite];
             uint8_t flags = addr_sp[0xfe03 + 4*sprite];
+            uint8_t obp = (flags & 0x10 ? addr_sp[0xff49] : addr_sp[0xff48]);
 
-            if(sposy > y && sposy <= y+8) {
+            if(sposy > y-8 && sposy <= y) {
                 // sprite wird in zeile angezeigt
                 for(int x = 0; x < 8; ++x) {
-                    int col = (addr_sp[0x8000 + 16*tile_idx + 2*(y+8-sposy)] >> (7-x)) % 2 +
-                              (addr_sp[0x8001 + 16*tile_idx + 2*(y+8-sposy)] >> (7-x)) % 2;
-                    if(col != 0) {
-                        buf[y*160 + (flags & 0x20 ? 7-x : x) + sposx + x_offset] = pal_grey[col];
+                    int px_x = (flags & 0x20 ? 7-x : x) + sposx;
+                    int px_y = (flags & 0x40 ? 7-y+sposy : y-sposy);
+
+                    int col = ((addr_sp[0x8000 + 16*tile_idx + 2*px_y] >> (7-x)) & 1) +
+                              (((addr_sp[0x8001 + 16*tile_idx + 2*px_y] >> (7-x)) & 1) << 1);
+                              
+                    if(col != 0 && px_x >= 0 && px_x < 168) {
+                        if(!(flags & 0x80) || buf[y*160 + px_x] == pal_grey[0]) {
+                            buf[y*160 + px_x] = pal_grey[obp>>(col<<1)&3];
+                        }
                     }
                 }
             }
@@ -77,7 +108,8 @@ int render_thread_function(void *ptr) {
     gb_lcd* lcd = (gb_lcd*) ptr;
 
     SDL_Init(SDL_INIT_VIDEO);
-    
+    SDL_LockMutex(lcd->vblank_mutex);
+   
     lcd->win = SDL_CreateWindow(
         "dynasmgb",
         SDL_WINDOWPOS_UNDEFINED,
@@ -91,7 +123,6 @@ int render_thread_function(void *ptr) {
     
     SDL_CreateRenderer(lcd->win, -1, SDL_RENDERER_ACCELERATED);
 
-    SDL_LockMutex(lcd->vblank_mutex);
     while(!lcd->exit) {
         SDL_CondWait(lcd->vblank_cond, lcd->vblank_mutex);
         render_frame(lcd);
