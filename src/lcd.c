@@ -74,7 +74,7 @@ render_back(uint32_t *buf, uint8_t* addr_sp)
     // TODO: sprite priorities
     if(addr_sp[0xff40] & 0x02) {
         bool sprite_8x16_mode = addr_sp[0xff40] & 0x04 ? true : false;
-        int y = addr_sp[0xff44]+addr_sp[0xff42];
+        int y = addr_sp[0xff44];//+addr_sp[0xff42];
         for(int sprite = 0; sprite < 40; ++sprite) {
             int sposy = addr_sp[0xfe00 + 4*sprite] - 16;
             int sposx = addr_sp[0xfe01 + 4*sprite] - 8;

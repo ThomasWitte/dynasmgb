@@ -44,9 +44,10 @@ void update_ioregs(gb_state* state) {
             mem[0xff41] |= 0x04;
             
             // Coincidence interrupt selected
-            if(mem[0xff41] & 0x40)
+            if(mem[0xff41] & 0x40) {
                 // stat interrupt occurs
                 mem[0xff0f] |= 0x02;
+            }
         }
 
         // if-register 0xff0f
@@ -55,9 +56,10 @@ void update_ioregs(gb_state* state) {
             mem[0xff0f] |= 0x01;
 
             // mode 1 interrupt selected
-            if(mem[0xff41] & 0x10 && (mem[0xff41] & 0x03) != 1)
+            if(mem[0xff41] & 0x10 && (mem[0xff41] & 0x03) != 1) {
                 // stat interrupt occurs
                 mem[0xff0f] |= 0x02;
+            }
 
             // LCDC Stat mode 1
             mem[0xff41] &= ~0x03;
@@ -69,9 +71,10 @@ void update_ioregs(gb_state* state) {
         // if not VBLANK
         if(state->inst_count-state->ly_count < 20) {
             // mode 2 interrupt selected
-            if(mem[0xff41] & 0x20 && (mem[0xff41] & 0x03) != 2)
+            if(mem[0xff41] & 0x20 && (mem[0xff41] & 0x03) != 2) {
                 // stat interrupt occurs
                 mem[0xff0f] |= 0x02;
+            }
 
             // LCDC Stat mode 2
             mem[0xff41] &= ~0x03;
@@ -82,9 +85,10 @@ void update_ioregs(gb_state* state) {
             mem[0xff41] |= 0x03;
         } else {
             // mode 0 interrupt selected
-            if(mem[0xff41] & 0x08 && (mem[0xff41] & 0x03) != 0)
+            if(mem[0xff41] & 0x08 && (mem[0xff41] & 0x03) != 0) {
                 // stat interrupt occurs
                 mem[0xff0f] |= 0x02;
+            }
 
             // LCDC Stat mode 0
             mem[0xff41] &= ~0x03;
