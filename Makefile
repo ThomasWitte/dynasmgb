@@ -1,7 +1,7 @@
 CC = gcc
-CFLAGS = -std=gnu11 -g -Wall -Wextra -Wno-unused-parameter
+CFLAGS = -std=gnu11 -g -Wall -Wextra -Wno-unused-parameter `pkg-config --cflags glib-2.0`
 LDFLAGS = -std=gnu11
-LIBS = -lSDL2
+LIBS = -lSDL2 `pkg-config --libs glib-2.0`
 BIN = dynasmgb
 OBJ = core.o instructions.o lcd.o memory.o emit.o interrupt.o main.o memory_inspector.o sound.o savestate.o
 

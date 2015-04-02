@@ -131,27 +131,35 @@ int main(int argc, char *argv[]) {
                 switch(evt.key.keysym.sym) {
                 case SDLK_a:
                     vm.state.keys.state |= GB_KEY_A;
+                    vm.memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_b:
                     vm.state.keys.state |= GB_KEY_B;
+                    vm.memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_UP:
                     vm.state.keys.state |= GB_KEY_UP;
+                    vm.memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_DOWN:
                     vm.state.keys.state |= GB_KEY_DOWN;
+                    vm.memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_LEFT:
                     vm.state.keys.state |= GB_KEY_LEFT;
+                    vm.memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_RIGHT:
                     vm.state.keys.state |= GB_KEY_RIGHT;
+                    vm.memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_y: // start button
                     vm.state.keys.state |= GB_KEY_START;
+                    vm.memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_x: // select button
                     vm.state.keys.state |= GB_KEY_SELECT;
+                    vm.memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_d: // enter debugging
                     if(debug_mode) {

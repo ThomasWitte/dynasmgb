@@ -4,7 +4,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <glib-2.0/glib.h>
 #include "memory.h"
+
+#define DATA(X) ((gb_instruction*)(X)->data)
 
 typedef struct {
     enum {NOP, LD16, LD, INC16, INC, DEC16, DEC, RLC, ADD16, ADD, RRC /*= 10*/,
@@ -41,6 +44,6 @@ typedef struct {
     void *mem;
 } gb_block;
 
-bool emit(gb_block *block, gb_instruction *inst, int n);
+bool emit(gb_block *block, GList *inst);
 
 #endif

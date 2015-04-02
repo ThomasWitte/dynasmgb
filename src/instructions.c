@@ -520,7 +520,7 @@ gb_instruction cb_table[] = {
 /* 0xff */ {SET,   REG_A,  BIT_7,  0, 0,   2,     2, 2,   0}
 };
 
-bool optimize_cc(gb_instruction* inst, int n) {
+bool optimize_cc(GList* inst) {
 /*    bool preserve_cc = false;
     
     for(int i = n-1; i >= 0; --i) {
@@ -567,13 +567,13 @@ bool optimize_cc(gb_instruction* inst, int n) {
         }
     }*/
     
-    for(int i = 0; i < n; ++i) {
-        if(inst[i].flags & INST_FLAG_AFFECTS_CC) {
-            inst[i].flags |= INST_FLAG_SAVE_CC;
+    for(; inst != NULL; inst = inst->next) {
+        if(DATA(inst)->flags & INST_FLAG_AFFECTS_CC) {
+            DATA(inst)->flags |= INST_FLAG_SAVE_CC;
         }
         
-        if(inst[i].flags & INST_FLAG_USES_CC) {
-            inst[i].flags |= INST_FLAG_RESTORE_CC;
+        if(DATA(inst)->flags & INST_FLAG_USES_CC) {
+            DATA(inst)->flags |= INST_FLAG_RESTORE_CC;
         }
     }
     
@@ -583,39 +583,47 @@ bool optimize_cc(gb_instruction* inst, int n) {
 // compiles block starting at start_address to gb_block
 bool compile(gb_block *block, gb_memory *mem, uint16_t start_address) {
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "compile new block @%#x\n", start_address);
-    gb_instruction instructions[100];
-    int n = 0;
-    
+
+    GList* instructions = NULL;
+
     uint16_t i = start_address;
     for(;;) {
+        gb_instruction *inst = g_new(gb_instruction, 1);
+
         uint8_t opcode = mem->mem[i];
         if(opcode != 0xcb) {
-            instructions[n] = inst_table[opcode];
+            *inst = inst_table[opcode];
         } else {
             opcode = mem->mem[i+1];
-            instructions[n] = cb_table[opcode];
+            *inst = cb_table[opcode];
         }
         
-        instructions[n].args = mem->mem + i;
-        instructions[n].address = i;
-        i += instructions[n].bytes;
+        inst->args = mem->mem + i;
+        inst->address = i;
+        i += inst->bytes;
         
-        if(instructions[n].opcode == ERROR) {
+        if(inst->opcode == ERROR) {
             printf("Invalid Opcode! (%#x)\n", opcode);
             return false;
         } else {
-            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "inst: %i @%#x\n", instructions[n].opcode, instructions[n].address);
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "inst: %i @%#x\n", inst->opcode, inst->address);
         }
         
-        if(instructions[n].flags & INST_FLAG_ENDS_BLOCK || n >= 99) {
+        instructions = g_list_prepend(instructions, inst);
+
+        if(inst->flags & INST_FLAG_ENDS_BLOCK) {
             break;
         }
-        
-        n++;
     }
 
-    if(!optimize_cc(instructions, n))
+    instructions = g_list_reverse(instructions);
+
+    if(!optimize_cc(instructions))
         return false;
 
-    return emit(block, instructions, n);
+    bool result = emit(block, instructions);
+
+    g_list_free_full(instructions, g_free);
+
+    return result;
 }

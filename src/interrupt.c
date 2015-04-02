@@ -102,6 +102,10 @@ uint16_t start_interrupt(gb_state* state) {
         uint8_t *mem = state->mem->mem;
         uint8_t interrupts = mem[0xffff] & mem[0xff0f];
 
+        if(mem[0xffff] & 0x08) {
+//            printf("serial interrupt\n");
+        }
+
         if(interrupts & 0x01) { // VBLANK on
             LOG_DEBUG("VBLANK interrupt!\n");
             state->ime = 0;       // disable interrupts
@@ -128,7 +132,10 @@ uint16_t start_interrupt(gb_state* state) {
         }
         
         if(interrupts & 0x10) { // Joypad
+            LOG_DEBUG("JOYPAD interrupt!\n");
             state->ime = 0;
+            mem[0xff0f] &= ~0x10;
+            return 0x60;
         }
     }
     return 0;

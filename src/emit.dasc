@@ -857,7 +857,7 @@ bool inst_stop(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     return true;
 }
 
-bool emit(gb_block *block, gb_instruction *inst, int n) {
+bool emit(gb_block *block, GList *inst) {
     dasm_State* d;
     uint32_t npc = 4;
     uint32_t nextpc = 0;
@@ -880,175 +880,175 @@ bool emit(gb_block *block, gb_instruction *inst, int n) {
 	|->f_start:
     | prologue
 
-    for(int i = 0; i <= n; ++i) {
-        if(inst[i].flags & INST_FLAG_RESTORE_CC) {
+    for(; inst != NULL; inst = inst->next) {
+        if(DATA(inst)->flags & INST_FLAG_RESTORE_CC) {
             | popfq
             | pushfq
         }
 
-        switch(inst[i].opcode) {
+        switch(DATA(inst)->opcode) {
         case NOP:
-            if(!inst_nop(Dst, &inst[i], &cycles))
+            if(!inst_nop(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case HALT:
-            if(!inst_halt(Dst, &inst[i], &cycles))
+            if(!inst_halt(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case STOP:
-            if(!inst_stop(Dst, &inst[i], &cycles))
+            if(!inst_stop(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case LD16:
-            if(!inst_ld16(Dst, &inst[i], &cycles))
+            if(!inst_ld16(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case LD:
-            if(!inst_ld(Dst, &inst[i], &cycles))
+            if(!inst_ld(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case INC16:
-            if(!inst_inc16(Dst, &inst[i], &cycles))
+            if(!inst_inc16(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case INC:
-            if(!inst_inc(Dst, &inst[i], &cycles))
+            if(!inst_inc(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case DEC16:
-            if(!inst_dec16(Dst, &inst[i], &cycles))
+            if(!inst_dec16(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case DEC:
-            if(!inst_dec(Dst, &inst[i], &cycles))
+            if(!inst_dec(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case JP:
 		case JR:
         case CALL:
         case RST:
-            if(!inst_jp(Dst, &inst[i], &cycles))
+            if(!inst_jp(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
 		case DAA:
-			if(!inst_daa(Dst, &inst[i], &cycles))
+            if(!inst_daa(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
 		case DI:
-			if(!inst_di(Dst, &inst[i], &cycles))
+            if(!inst_di(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
 		case EI:
-			if(!inst_ei(Dst, &inst[i], &cycles))
+            if(!inst_ei(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
 		case CPL:
-			if(!inst_cpl(Dst, &inst[i], &cycles))
+            if(!inst_cpl(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case SUB:
-            if(!inst_sub(Dst, &inst[i], &cycles))
+            if(!inst_sub(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
 		case CP:
-	        if(!inst_cp(Dst, &inst[i], &cycles))
+            if(!inst_cp(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
 		case CCF:
-	        if(!inst_ccf(Dst, &inst[i], &cycles))
+            if(!inst_ccf(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case OR:
-            if(!inst_or(Dst, &inst[i], &cycles))
+            if(!inst_or(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case AND:
-            if(!inst_and(Dst, &inst[i], &cycles))
+            if(!inst_and(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case XOR:
-            if(!inst_xor(Dst, &inst[i], &cycles))
+            if(!inst_xor(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case PUSH:
-            if(!inst_push(Dst, &inst[i], &cycles))
+            if(!inst_push(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case POP:
-            if(!inst_pop(Dst, &inst[i], &cycles))
+            if(!inst_pop(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case RET:
         case RETI:
-            if(!inst_ret(Dst, &inst[i], &cycles))
+            if(!inst_ret(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case ADD16:
-            if(!inst_add16(Dst, &inst[i], &cycles))
+            if(!inst_add16(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case ADD:
-            if(!inst_add(Dst, &inst[i], &cycles))
+            if(!inst_add(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case ADC:
-            if(!inst_adc(Dst, &inst[i], &cycles))
+            if(!inst_adc(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case BIT:
-            if(!inst_bit(Dst, &inst[i], &cycles))
+            if(!inst_bit(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case RES:
-            if(!inst_res(Dst, &inst[i], &cycles))
+            if(!inst_res(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case RR:
-            if(!inst_rr(Dst, &inst[i], &cycles))
+            if(!inst_rr(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case RL:
-            if(!inst_rl(Dst, &inst[i], &cycles))
+            if(!inst_rl(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case RRC:
-            if(!inst_rrc(Dst, &inst[i], &cycles))
+            if(!inst_rrc(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case RLC:
-            if(!inst_rlc(Dst, &inst[i], &cycles))
+            if(!inst_rlc(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case SBC:
-            if(!inst_sbc(Dst, &inst[i], &cycles))
+            if(!inst_sbc(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case SET:
-            if(!inst_set(Dst, &inst[i], &cycles))
+            if(!inst_set(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case SLA:
-            if(!inst_sla(Dst, &inst[i], &cycles))
+            if(!inst_sla(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case SRA:
-            if(!inst_sra(Dst, &inst[i], &cycles))
+            if(!inst_sra(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case SRL:
-            if(!inst_srl(Dst, &inst[i], &cycles))
+            if(!inst_srl(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case SWAP:
-            if(!inst_swap(Dst, &inst[i], &cycles))
+            if(!inst_swap(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         default:
-            printf("unrecognized opcode (%i)\n", inst[i].opcode);
+            printf("unrecognized opcode (%i)\n", DATA(inst)->opcode);
             goto exit_fail;
         }
 
-        if(inst[i].flags & INST_FLAG_SAVE_CC) {
+        if(DATA(inst)->flags & INST_FLAG_SAVE_CC) {
             | pop tmp1
             | pushfq
         }
@@ -1087,7 +1087,7 @@ bool emit(gb_block *block, gb_instruction *inst, int n) {
 
 	dasm_free(&d);
 
-    LOG_DEBUG("compilation successful! %x\n", inst->address);
+    LOG_DEBUG("compilation successful!\n");
 
     return true;
     

@@ -58,8 +58,10 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
         LOG_DEBUG("Memory write to %#lx, reset to 0\n", addr);
         mem[addr] = 0;
     } else if(addr == 0xff00) { // check for keypresses
-        LOG_DEBUG("Reading joypad state\n");
+        LOG_DEBUG("Reading joypad state @%4x\n", state->pc);
         mem[addr] = get_joypad_state(&state->keys, value);
+    } else if(addr == 0xff01) {
+        LOG_DEBUG("Writing serial transfer data @%4x\n", state->pc);
     } else if(addr == 0xff46) { // DMA Transfer to OAM RAM
         // TODO: Sprünge in den RAM detektieren und DMA optimieren
         LOG_DEBUG("DMA Transfer started.\n");
