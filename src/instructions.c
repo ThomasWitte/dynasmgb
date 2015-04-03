@@ -1,4 +1,5 @@
 #include "instructions.h"
+#include "optimize.tab.h"
 
 gb_instruction inst_table[] = {
 /* CODE    OPCODE  ARG1    ARG2    PTR/ADDR BYTES CYCLES  FLAGS*/
@@ -580,6 +581,32 @@ bool optimize_cc(GList* inst) {
     return true;
 }
 
+GList *instructions_to_compile = NULL;
+
+bool optimize(GList* instructions) {
+    instructions_to_compile = instructions;
+    yyparse();
+    return true;
+}
+
+int yylex() {
+    if(instructions_to_compile == NULL)
+        return 0; // end of file
+
+    GList *l = NULL;
+    l = g_list_append(l, instructions_to_compile->data);
+    yylval = l;
+
+    instructions_to_compile = instructions_to_compile->next;
+
+    return 1;//DATA(inst)->opcode;
+}
+
+void yyerror (char const *s)
+{
+    fprintf (stderr, "%s\n", s);
+}
+
 // compiles block starting at start_address to gb_block
 bool compile(gb_block *block, gb_memory *mem, uint16_t start_address) {
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "compile new block @%#x\n", start_address);
@@ -619,6 +646,9 @@ bool compile(gb_block *block, gb_memory *mem, uint16_t start_address) {
     instructions = g_list_reverse(instructions);
 
     if(!optimize_cc(instructions))
+        return false;
+
+    if(!optimize(instructions))
         return false;
 
     bool result = emit(block, instructions);
