@@ -104,6 +104,9 @@ render_back(uint32_t *buf, uint8_t* addr_sp)
     }
 }
 
+uint32_t imgbuf[2][160*144];
+int cur_imgbuf = 0;
+
 int render_thread_function(void *ptr) {
     gb_lcd* lcd = (gb_lcd*) ptr;
 
@@ -125,6 +128,7 @@ int render_thread_function(void *ptr) {
 
     while(!lcd->exit) {
         SDL_CondWait(lcd->vblank_cond, lcd->vblank_mutex);
+        cur_imgbuf = (cur_imgbuf+1)%2;
         render_frame(lcd);
     }
     SDL_UnlockMutex(lcd->vblank_mutex);
@@ -141,11 +145,9 @@ bool init_window(gb_lcd* lcd) {
     lcd->vblank_cond = SDL_CreateCond();
     
     lcd->exit = false;
-    
+
     lcd->thread = SDL_CreateThread(render_thread_function, "Render Thread", (void*)lcd);
     
-    SDL_LockMutex(lcd->vblank_mutex);
-        
     return true;
 }
 
@@ -161,10 +163,9 @@ void deinit_window(gb_lcd* lcd) {
     SDL_Quit();
 }
 
-uint32_t imgbuf[160*144];
 
 void update_line(uint8_t *mem) {
-    render_back(imgbuf, mem);
+    render_back(imgbuf[cur_imgbuf], mem);
 }
 
 void render_frame(gb_lcd* lcd) {
@@ -174,7 +175,7 @@ void render_frame(gb_lcd* lcd) {
         bitmapTex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, 160, 144);
     }
     SDL_RenderClear(renderer);
-    SDL_UpdateTexture(bitmapTex, NULL, imgbuf, 160*sizeof(uint32_t));
+    SDL_UpdateTexture(bitmapTex, NULL, imgbuf[(cur_imgbuf+1)%2], 160*sizeof(uint32_t));
     SDL_RenderCopy(renderer, bitmapTex, NULL, NULL);
     SDL_RenderPresent(renderer);
 }

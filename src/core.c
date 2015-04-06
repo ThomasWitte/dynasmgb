@@ -88,7 +88,6 @@ bool init_vm(gb_vm *vm, const char *filename) {
 }
 
 bool run_vm(gb_vm *vm) {
-    bool mutex_locked = true;
     uint16_t prev_pc = vm->state.last_pc;
     vm->state.last_pc = vm->state.pc;
 
@@ -144,11 +143,6 @@ bool run_vm(gb_vm *vm) {
         // check interrupts
         update_ioregs(&vm->state);
 
-        if(vm->memory.mem[0xff44] == 152 && !mutex_locked) {
-            SDL_LockMutex(vm->lcd.vblank_mutex);
-            mutex_locked = true;
-        }
-
         if(vm->memory.mem[0xff44] == 144) {
             if(vm->draw_frame) {
                 unsigned time = SDL_GetTicks();
@@ -169,11 +163,7 @@ bool run_vm(gb_vm *vm) {
                 }
                 
                 vm->next_frame_time += 17; // 17ms until next frame
-                //render_frame(&vm->lcd);
                 SDL_CondBroadcast(vm->lcd.vblank_cond);
-                SDL_UnlockMutex(vm->lcd.vblank_mutex);
-                mutex_locked = false;
-                                
                 vm->draw_frame = false;
             }
         } else {
