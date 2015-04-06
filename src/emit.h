@@ -1,20 +1,18 @@
 #ifndef DYNASMGB_EMIT_H
 #define DYNASMGB_EMIT_H
 
+#define YYSTYPE GList*
+#define DATA(X) ((gb_instruction*)(X)->data)
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <glib-2.0/glib.h>
 #include "memory.h"
-
-#define DATA(X) ((gb_instruction*)(X)->data)
+#include "optimize.tab.h"
 
 typedef struct {
-    enum {NOP, LD16, LD, INC16, INC, DEC16, DEC, RLC, ADD16, ADD, RRC /*= 10*/,
-          STOP, RL, JR, RR, DAA, CPL, SCF, CCF, HALT, ADC /*= 20*/,
-          SUB, SBC, AND, XOR, OR, CP, RET, POP, JP, CALL /*= 30*/,
-          PUSH, RST, RETI, DI, EI, SLA, SRA, SWAP, SRL, BIT /*= 40*/,
-          RES, SET, ERROR} opcode;
+    enum yytokentype opcode;
     enum {NONE, REG_A, REG_B, REG_C, REG_D, REG_E, REG_H, REG_L /*=7*/,
           REG_AF, REG_BC, REG_DE, REG_HL, REG_SP, IMM8, IMM16 /*=14*/,
           MEM_BC, MEM_DE, MEM_HL, MEM_16, MEM_8, MEM_C, MEM_INC_HL, MEM_DEC_HL /*=22*/,

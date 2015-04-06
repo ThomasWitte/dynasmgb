@@ -1,5 +1,5 @@
 #include "instructions.h"
-#include "optimize.tab.h"
+//#include "optimize.tab.h"
 
 gb_instruction inst_table[] = {
 /* CODE    OPCODE  ARG1    ARG2    PTR/ADDR BYTES CYCLES  FLAGS*/
@@ -522,53 +522,9 @@ gb_instruction cb_table[] = {
 };
 
 bool optimize_cc(GList* inst) {
-/*    bool preserve_cc = false;
-    
-    for(int i = n-1; i >= 0; --i) {
-        if(inst[i].flags & INST_FLAG_AFFECTS_CC) {
-            if(inst[i].flags & INST_FLAG_USES_CC) {
-                preserve_cc = true;
-            }
-            //preserve_cc = false;
-            continue;
-        }
 
-        if(preserve_cc) {
-            inst[i].flags |= INST_FLAG_PRESERVE_CC;
-        }
-        
-        if(inst[i].flags & INST_FLAG_USES_CC) {
-            preserve_cc = true;
-        }
-    }
-    
-    bool flags_saved = false;
-    for(int i = 0; i < n; ++i) {
-        if(flags_saved && i == n-1) {
-            inst[i].flags |= INST_FLAG_RESTORE_CC;
-            flags_saved = false;
-        }
-
-        if(flags_saved && (!(inst[i].flags & INST_FLAG_PRESERVE_CC) || inst[i].flags & INST_FLAG_USES_CC)) {
-            inst[i].flags |= INST_FLAG_RESTORE_CC;
-            flags_saved = false;
-        }
-
-        if(!flags_saved && inst[i].flags & INST_FLAG_PRESERVE_CC) {
-            inst[i].flags |= INST_FLAG_SAVE_CC;
-            flags_saved = true;
-        }
-
-        if(!flags_saved && i != n-1
-            && (inst[i+1].flags & INST_FLAG_PRESERVE_CC)
-            && (inst[i].flags & INST_FLAG_AFFECTS_CC))
-        {
-            inst[i].flags |= INST_FLAG_SAVE_CC;
-            flags_saved = true;
-        }
-    }*/
-    
     for(; inst != NULL; inst = inst->next) {
+
         if(DATA(inst)->flags & INST_FLAG_AFFECTS_CC) {
             DATA(inst)->flags |= INST_FLAG_SAVE_CC;
         }
@@ -582,24 +538,26 @@ bool optimize_cc(GList* inst) {
 }
 
 GList *instructions_to_compile = NULL;
+GList *opt_result = NULL;
 
-bool optimize(GList* instructions) {
-    instructions_to_compile = instructions;
+bool optimize(GList** instructions) {
+    instructions_to_compile = *instructions;
     yyparse();
+    g_list_free(*instructions);
+    *instructions = opt_result;
     return true;
 }
 
 int yylex() {
     if(instructions_to_compile == NULL)
-        return 0; // end of file
+        return END_OF_BLOCK;
 
-    GList *l = NULL;
-    l = g_list_append(l, instructions_to_compile->data);
-    yylval = l;
+    yylval = g_list_append(NULL, instructions_to_compile->data);
 
+    int opcode = DATA(instructions_to_compile)->opcode;
     instructions_to_compile = instructions_to_compile->next;
 
-    return 1;//DATA(inst)->opcode;
+    return opcode;
 }
 
 void yyerror (char const *s)
@@ -635,7 +593,7 @@ bool compile(gb_block *block, gb_memory *mem, uint16_t start_address) {
         } else {
             SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "inst: %i @%#x\n", inst->opcode, inst->address);
         }
-        
+
         instructions = g_list_prepend(instructions, inst);
 
         if(inst->flags & INST_FLAG_ENDS_BLOCK) {
@@ -645,10 +603,10 @@ bool compile(gb_block *block, gb_memory *mem, uint16_t start_address) {
 
     instructions = g_list_reverse(instructions);
 
-    if(!optimize_cc(instructions))
+    if(!optimize(&instructions))
         return false;
 
-    if(!optimize(instructions))
+    if(!optimize_cc(instructions))
         return false;
 
     bool result = emit(block, instructions);
