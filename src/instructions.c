@@ -603,8 +603,8 @@ bool compile(gb_block *block, gb_memory *mem, uint16_t start_address) {
 
     instructions = g_list_reverse(instructions);
 
-    if(!optimize(&instructions))
-        return false;
+    //if(!optimize(&instructions))
+    //    return false;
 
     if(!optimize_cc(instructions))
         return false;

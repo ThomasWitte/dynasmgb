@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <string.h>
 #include "memory.h"
+#include "core.h"
 
 uint8_t get_joypad_state(gb_keys *keys, uint8_t value) {
     uint8_t result = 0;
@@ -67,6 +68,21 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
         LOG_DEBUG("DMA Transfer started.\n");
         mem[addr] = value;
         memcpy(&mem[0xfe00], &mem[value << 8], 0xa0);
+    } else if(addr >= 0xff80) { // write to internal ram
+        // TODO: hack!!
+        gb_vm *vm = (gb_vm*)state;
+
+        // invalidate compiled blocks
+        for(int i = 0; i < addr - 0xff80; ++i) {
+            if(vm->highmem_blocks[i].exec_count != 0 &&
+               vm->highmem_blocks[i].end_address > addr) {
+                
+                free_block(&vm->highmem_blocks[i]);
+                vm->highmem_blocks[i].exec_count = 0;
+            }
+        }
+        
+        mem[addr] = value;
     } else {
         LOG_DEBUG("Memory write to %#lx, value is %#lx\n", addr, value);
         mem[addr] = value;
@@ -78,13 +94,13 @@ bool gb_memory_init(gb_memory *mem, const char *filename) {
     //TODO: memory aliasing
     //TODO: memory banking
 
-    int fd = open(filename, O_RDONLY);
-    if(fd < 0) {
+    mem->fd = open(filename, O_RDONLY);
+    if(mem->fd < 0) {
         printf("Could not open file! (%i)\n", errno);
         return false;
     }
     
-    mem->mem = mmap((void*)0x1000000, 0x8000, PROT_READ, MAP_PRIVATE, fd, 0);
+    mem->mem = mmap((void*)0x1000000, 0x8000, PROT_READ, MAP_PRIVATE, mem->fd, 0);
     if(mem->mem == MAP_FAILED) {
         printf("Map failed! (%i)\n", errno);
         return false;
@@ -95,7 +111,6 @@ bool gb_memory_init(gb_memory *mem, const char *filename) {
         printf("Allocating memory failed! (%i)\n", errno);
         return false;
     }
-    close(fd);
 
     mem->filename = filename;
     mem->mbc = mem->mem[0x0147];
@@ -114,18 +129,11 @@ void gb_memory_change_rom_bank(gb_memory *mem, int bank) {
         return;
     }
     
-    int fd = open(mem->filename, O_RDONLY);
-    if(fd < 0) {
-        printf("Could not open file! (%i)\n", errno);
-        return;
-    }
-    
     if(mmap(mem->mem + 0x4000, 0x4000, PROT_READ,
-            MAP_PRIVATE | MAP_FIXED, fd, 0x4000 * bank) == MAP_FAILED) {
+            MAP_PRIVATE | MAP_FIXED, mem->fd, 0x4000 * bank) == MAP_FAILED) {
         printf("mmap failed! (%i)\n", errno);
         return;
     }
-    close(fd);
     
     mem->current_rom_bank = bank;
     
@@ -139,6 +147,8 @@ void gb_memory_change_ram_bank(gb_memory *mem, int bank) {
 
 // free memory again
 bool gb_memory_free(gb_memory *mem) {
+    close(mem->fd);
+    
     if(munmap(mem->mem, 0x8000) != 0 ||
        munmap(mem->mem + 0x8000, 0x8000) != 0)
     {

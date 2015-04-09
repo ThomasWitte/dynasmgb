@@ -38,6 +38,7 @@ typedef struct {
 typedef struct {
     uint16_t(*func)(gb_state*);
     unsigned exec_count;
+    uint16_t end_address;
     size_t size;
     void *mem;
 } gb_block;

@@ -14,6 +14,7 @@
 typedef struct {
     uint8_t* mem;
     const char* filename;
+    int fd;
     enum {MBC_NONE = 0x00, MBC1 = 0x01, MBC2 = 0x05, MBC3 = 0x11, MBC5 = 0x19} mbc;
     uint8_t mbc_mode;
     uint8_t mbc_data;
@@ -53,6 +54,8 @@ typedef struct {
     uint64_t ly_count;
     uint64_t tima_count;
     uint64_t div_count;
+
+    uint64_t next_update;
 
     // interrupt timers etc
     bool ime;

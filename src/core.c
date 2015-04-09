@@ -28,6 +28,7 @@ bool init_vm(gb_vm *vm, const char *filename) {
     vm->state.ly_count = 0;
     vm->state.tima_count = 0;
     vm->state.div_count = 0;
+    vm->state.next_update = 0;
     
     vm->state.ime = true;
     vm->state.halt = false;
@@ -69,6 +70,11 @@ bool init_vm(gb_vm *vm, const char *filename) {
 	        vm->compiled_blocks[block][i].exec_count = 0;
 	        vm->compiled_blocks[block][i].func = 0;
 	    }
+
+    for(int i = 0; i < 0x80; ++i) {
+	    vm->highmem_blocks[i].exec_count = 0;
+	    vm->highmem_blocks[i].func = 0;
+	}
 
     // init lcd
     if(!init_window(&vm->lcd))
@@ -113,6 +119,16 @@ bool run_vm(gb_vm *vm) {
         vm->compiled_blocks[bank][vm->state.pc-0x4000].exec_count++;
         vm->state.pc = vm->compiled_blocks[bank][vm->state.pc-0x4000].func(&vm->state);
         SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "finished\n");
+    } else if(vm->state.pc >= 0xff80) { // execute function in internal ram, e.g. for dma
+        if(vm->highmem_blocks[vm->state.pc-0xff80].exec_count == 0) {
+            if(!compile(&vm->highmem_blocks[vm->state.pc-0xff80], &vm->memory, vm->state.pc))
+                goto compile_error;
+        }
+        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "execute function @%#x (count %i)\n", vm->state.pc,
+               vm->highmem_blocks[vm->state.pc-0xff80].exec_count);
+        vm->highmem_blocks[vm->state.pc-0xff80].exec_count++;
+        vm->state.pc = vm->highmem_blocks[vm->state.pc-0xff80].func(&vm->state);
+        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "finished\n");
     } else { // execute function in ram
         gb_block temp = {0};
         if(!compile(&temp, &vm->memory, vm->state.pc))
@@ -140,58 +156,61 @@ bool run_vm(gb_vm *vm) {
 #endif
 
     do {
-        // check interrupts
-        update_ioregs(&vm->state);
+        if(vm->state.inst_count >= vm->state.next_update) {
+            // check interrupts
+            update_ioregs(&vm->state);
 
-        if(vm->memory.mem[0xff44] == 144) {
-            if(vm->draw_frame) {
-                unsigned time = SDL_GetTicks();
-                if(!SDL_TICKS_PASSED(time, vm->next_frame_time)) {
-                    SDL_Delay(vm->next_frame_time - time);
+            if(vm->memory.mem[0xff44] == 144) {
+                if(vm->draw_frame) {
+                    unsigned time = SDL_GetTicks();
+                    if(!SDL_TICKS_PASSED(time, vm->next_frame_time)) {
+                        SDL_Delay(vm->next_frame_time - time);
+                    }
+
+                    vm->time_busy += time - vm->last_time;
+                    vm->last_time = SDL_GetTicks();
+
+                    if(++(vm->frame_cnt) == 60) {
+                        vm->frame_cnt = 0;
+                        float load = (vm->time_busy) / (60*17.0);
+                        char title[15];
+                        sprintf(title, "load: %.2f", load);
+                        SDL_SetWindowTitle(vm->lcd.win, title);
+                        vm->time_busy = 0;
+                    }
+
+                    vm->next_frame_time += 17; // 17ms until next frame
+                    SDL_CondBroadcast(vm->lcd.vblank_cond);
+                    vm->draw_frame = false;
                 }
-                
-                vm->time_busy += time - vm->last_time;
-                vm->last_time = SDL_GetTicks();
-                
-                if(++(vm->frame_cnt) == 60) {
-                    vm->frame_cnt = 0;
-                    float load = (vm->time_busy) / (60*17.0);
-                    char title[15];
-                    sprintf(title, "load: %.2f", load);
-                    SDL_SetWindowTitle(vm->lcd.win, title);
-                    vm->time_busy = 0;
-                }
-                
-                vm->next_frame_time += 17; // 17ms until next frame
-                SDL_CondBroadcast(vm->lcd.vblank_cond);
-                vm->draw_frame = false;
+            } else {
+                vm->draw_frame = true;
             }
-        } else {
-            vm->draw_frame = true;
-        }
 
-        uint16_t interrupt_addr = start_interrupt(&vm->state);
-        if(interrupt_addr) {
-#ifdef DEBUG_CG
-            printf("interrupt from %i to %i\n", vm->state.pc, interrupt_addr);
-#endif
+            uint16_t interrupt_addr = start_interrupt(&vm->state);
+            if(interrupt_addr) {
+    #ifdef DEBUG_CG
+                printf("interrupt from %i to %i\n", vm->state.pc, interrupt_addr);
+    #endif
 
-            // end halt mode
-            vm->state.halt = false;
-        
-            // save PC to stack
-            vm->state._sp -= 2;
-            *(uint16_t*)(&vm->state.mem->mem[vm->state._sp]) = vm->state.pc;
-            // jump to interrupt address
-            vm->state.pc = interrupt_addr;
+                // end halt mode
+                vm->state.halt = false;
 
-            //if(interrupt_addr == 0x40) { // VBLANK interrupt
-            //    render_frame(vm->win);
-            //}
+                // save PC to stack
+                vm->state._sp -= 2;
+                *(uint16_t*)(&vm->state.mem->mem[vm->state._sp]) = vm->state.pc;
+                // jump to interrupt address
+                vm->state.pc = interrupt_addr;
+
+                //if(interrupt_addr == 0x40) { // VBLANK interrupt
+                //    render_frame(vm->win);
+                //}
+            }
+            vm->state.next_update = next_update_time(&vm->state);
         }
         
         if(vm->state.halt) {
-            vm->state.inst_count += 16;
+            vm->state.inst_count = (vm->state.inst_count < vm->state.next_update ? vm->state.next_update : vm->state.inst_count + 16);
         }
     } while(vm->state.halt);
     
@@ -215,6 +234,11 @@ bool free_vm(gb_vm *vm) {
 	    for(int i = 0; i < 0x4000; ++i)
             if(vm->compiled_blocks[block][i].exec_count > 0)
 	            free_block(&vm->compiled_blocks[block][i]);
+
+    for(int i = 0; i < 0x80; ++i)
+        if(vm->highmem_blocks[i].exec_count > 0)
+	        free_block(&vm->highmem_blocks[i]);
+
 
     // destroy sound
     deinit_sound(&vm->sound);

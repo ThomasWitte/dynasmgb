@@ -860,8 +860,8 @@ bool inst_stop(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 bool emit(gb_block *block, GList *inst) {
     dasm_State* d;
     uint32_t npc = 4;
-    uint32_t nextpc = 0;
     uint64_t cycles = 0;
+    uint16_t end_address = 0;
 
     |.section code
     dasm_init(&d, DASM_MAXSECTION);
@@ -881,6 +881,8 @@ bool emit(gb_block *block, GList *inst) {
     | prologue
 
     for(; inst != NULL; inst = inst->next) {
+        end_address = DATA(inst)->address + DATA(inst)->bytes - 1;
+        
         if(DATA(inst)->flags & INST_FLAG_RESTORE_CC) {
             | popfq
             | pushfq
@@ -1083,6 +1085,7 @@ bool emit(gb_block *block, GList *inst) {
     block->func = labels[lbl_f_start];
     block->mem = buf;
     block->size = sz;
+    block->end_address = end_address;
     block->exec_count = 0;
 
 	dasm_free(&d);

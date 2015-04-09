@@ -42,8 +42,12 @@ bool savestate_load(gb_vm *vm, const char* filename) {
             vm->compiled_blocks[i][j] = temp.compiled_blocks[i][j];
         }
     
+    for(int i = 0; i < 0x80; ++i)
+        vm->highmem_blocks[i] = temp.highmem_blocks[i];
+    
     vm->memory.mem = temp.memory.mem;
     vm->memory.filename = temp.memory.filename;
+    vm->memory.fd = temp.memory.fd;
     
     vm->state.mem = &vm->memory;
     vm->sound.memory = &vm->memory;

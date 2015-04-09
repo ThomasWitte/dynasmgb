@@ -17,6 +17,7 @@ typedef struct {
     gb_memory memory;
     gb_sound sound;
     gb_block compiled_blocks[4][0x4000]; // bank, start address
+    gb_block highmem_blocks[0x80];
     gb_lcd lcd;
     bool draw_frame;
     unsigned next_frame_time;

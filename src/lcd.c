@@ -26,10 +26,10 @@ render_back(uint32_t *buf, uint8_t* addr_sp)
 	/* Advance to row in tile map */
 	ptr_map += ((y>>3)<<5)&0x3ff;
 	
-	i=addr_sp[0xff44]*160; //0;
+    i=addr_sp[0xff44]*160; //0;
 	j &= 7;
 	x = 8-j;
-	shftr=((uint8_t)(~j))%8; // shift factor
+    shftr=((uint8_t)(~j))%8; // shift factor
 	for (; x<168; x+=8) {
 		tile_num = ptr_map[x1++&0x1f];
 		if (!(addr_sp[0xff40]&0x10))
@@ -69,8 +69,6 @@ render_back(uint32_t *buf, uint8_t* addr_sp)
         }
     }
 
-    // TODO: support sprite color palettes
-    // TODO: support flags
     // TODO: sprite priorities
     if(addr_sp[0xff40] & 0x02) {
         bool sprite_8x16_mode = addr_sp[0xff40] & 0x04 ? true : false;
@@ -112,18 +110,18 @@ int render_thread_function(void *ptr) {
 
     SDL_Init(SDL_INIT_VIDEO);
     SDL_LockMutex(lcd->vblank_mutex);
-   
+
     lcd->win = SDL_CreateWindow(
         "dynasmgb",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
         160*3, 144*3, SDL_WINDOW_OPENGL);
-    
+
     if(!lcd->win) {
         printf("Could not create window!\n");
         return false;
     }
-    
+
     SDL_CreateRenderer(lcd->win, -1, SDL_RENDERER_ACCELERATED);
 
     while(!lcd->exit) {
@@ -143,7 +141,7 @@ int render_thread_function(void *ptr) {
 bool init_window(gb_lcd* lcd) {
     lcd->vblank_mutex = SDL_CreateMutex();
     lcd->vblank_cond = SDL_CreateCond();
-    
+
     lcd->exit = false;
 
     lcd->thread = SDL_CreateThread(render_thread_function, "Render Thread", (void*)lcd);
@@ -156,7 +154,7 @@ void deinit_window(gb_lcd* lcd) {
     SDL_CondBroadcast(lcd->vblank_cond);
     
     SDL_WaitThread(lcd->thread, 0);
-    
+
     SDL_DestroyCond(lcd->vblank_cond);
     SDL_DestroyMutex(lcd->vblank_mutex);
     
@@ -172,9 +170,9 @@ void render_frame(gb_lcd* lcd) {
     SDL_Renderer *renderer = SDL_GetRenderer(lcd->win);
     static SDL_Texture *bitmapTex = NULL;
     if(!bitmapTex) {
-        bitmapTex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, 160, 144);
+        bitmapTex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 160, 144);
     }
-    SDL_RenderClear(renderer);
+    //SDL_RenderClear(renderer);
     SDL_UpdateTexture(bitmapTex, NULL, imgbuf[(cur_imgbuf+1)%2], 160*sizeof(uint32_t));
     SDL_RenderCopy(renderer, bitmapTex, NULL, NULL);
     SDL_RenderPresent(renderer);

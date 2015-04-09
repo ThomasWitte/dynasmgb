@@ -1,6 +1,31 @@
 #include "interrupt.h"
 #include "lcd.h"
 
+uint64_t next_update_time(gb_state* state) {
+    // tima-register 0xff05
+    int clock[] = {256, 4, 16, 64};
+    int cl = clock[state->mem->mem[0xff07] & 0x03];
+    int stat_mode = state->mem->mem[0xff41] & 0x03;
+
+    uint64_t time = state->ly_count + 114;
+
+    if(time > state->inst_count + cl)
+        time = state->inst_count + cl;
+
+    switch(stat_mode) {
+    case 2:
+        if(time > state->ly_count + 20)
+            time = state->ly_count + 20;
+        break;
+    case 3:
+        if(time > state->ly_count + 64)
+            time = state->ly_count + 64;
+        break;
+    }
+
+    return time;
+}
+
 void update_ioregs(gb_state* state) {
     uint8_t *mem = state->mem->mem;
 
