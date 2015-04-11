@@ -46,6 +46,10 @@
 %token BIT
 %token RES
 %token SET
+
+%token JP_TARGET
+%token JP_BWD
+%token JP_FWD
 %token ERROR
 
 %%

@@ -210,7 +210,35 @@ compile_error:
     return false;
 }
 
+void show_statistics(gb_vm *vm) {
+	printf("some statistics:\n");
+
+	uint64_t compiled_functions = 0;
+	uint64_t most_executed = 0;
+	uint64_t most_executed_addr = 0;
+	uint64_t total_executed = 0;
+
+	for(int block = 0; block < 4; ++block)
+	    for(int i = 0; i < 0x4000; ++i) {
+			if(vm->compiled_blocks[block][i].exec_count > 0) {
+				++compiled_functions;
+				if(vm->compiled_blocks[block][i].exec_count > most_executed) {
+					most_executed_addr = block * 0x4000 + i;
+					most_executed = vm->compiled_blocks[block][i].exec_count;
+				}
+				total_executed += vm->compiled_blocks[block][i].exec_count;
+			}
+		}
+	
+	printf("\ttotal compiled rom functions: %lu\n", compiled_functions);
+	printf("\thottest: block @%#lx, %lu times executed\n", most_executed_addr, most_executed);
+	printf("\texecuted blocks total / per frame: %lu/%lu\n", total_executed, total_executed / vm->compiled_blocks[0][0x40].exec_count);
+	printf("\tframes: %u\n", vm->compiled_blocks[0][0x40].exec_count);
+}
+
 bool free_vm(gb_vm *vm) {
+	show_statistics(vm);
+
 	for(int block = 0; block < 4; ++block)
 	    for(int i = 0; i < 0x4000; ++i)
             if(vm->compiled_blocks[block][i].exec_count > 0)

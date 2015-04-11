@@ -67,7 +67,7 @@ gb_instruction inst_table[] = {
 /* 0x3d */ {DEC,   REG_A,  NONE,   0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
 /* 0x3e */ {LD,    REG_A,  IMM8,   0, 0,   2,     2, 2,   0},
 /* 0x3f */ {CCF,   NONE,   NONE,   0, 0,   1,     1, 1,   INST_FLAG_USES_CC|INST_FLAG_AFFECTS_CC},
-/* 0x40 */ {LD,    REG_B,  REG_B,  0, 0,   1,     1, 1,   0},
+/* 0x40 */ {NOP,   NONE,   NONE,   0, 0,   1,     1, 1,   0},
 /* 0x41 */ {LD,    REG_B,  REG_C,  0, 0,   1,     1, 1,   0},
 /* 0x42 */ {LD,    REG_B,  REG_D,  0, 0,   1,     1, 1,   0},
 /* 0x43 */ {LD,    REG_B,  REG_E,  0, 0,   1,     1, 1,   0},
@@ -76,7 +76,7 @@ gb_instruction inst_table[] = {
 /* 0x46 */ {LD,    REG_B,  MEM_HL, 0, 0,   1,     2, 2,   0},
 /* 0x47 */ {LD,    REG_B,  REG_A,  0, 0,   1,     1, 1,   0},
 /* 0x48 */ {LD,    REG_C,  REG_B,  0, 0,   1,     1, 1,   0},
-/* 0x49 */ {LD,    REG_C,  REG_C,  0, 0,   1,     1, 1,   0},
+/* 0x49 */ {NOP,   NONE,   NONE,   0, 0,   1,     1, 1,   0},
 /* 0x4a */ {LD,    REG_C,  REG_D,  0, 0,   1,     1, 1,   0},
 /* 0x4b */ {LD,    REG_C,  REG_E,  0, 0,   1,     1, 1,   0},
 /* 0x4c */ {LD,    REG_C,  REG_H,  0, 0,   1,     1, 1,   0},
@@ -85,7 +85,7 @@ gb_instruction inst_table[] = {
 /* 0x4f */ {LD,    REG_C,  REG_A,  0, 0,   1,     1, 1,   0},
 /* 0x50 */ {LD,    REG_D,  REG_B,  0, 0,   1,     1, 1,   0},
 /* 0x51 */ {LD,    REG_D,  REG_C,  0, 0,   1,     1, 1,   0},
-/* 0x52 */ {LD,    REG_D,  REG_D,  0, 0,   1,     1, 1,   0},
+/* 0x52 */ {NOP,   NONE,   NONE,   0, 0,   1,     1, 1,   0},
 /* 0x53 */ {LD,    REG_D,  REG_E,  0, 0,   1,     1, 1,   0},
 /* 0x54 */ {LD,    REG_D,  REG_H,  0, 0,   1,     1, 1,   0},
 /* 0x55 */ {LD,    REG_D,  REG_L,  0, 0,   1,     1, 1,   0},
@@ -94,7 +94,7 @@ gb_instruction inst_table[] = {
 /* 0x58 */ {LD,    REG_E,  REG_B,  0, 0,   1,     1, 1,   0},
 /* 0x59 */ {LD,    REG_E,  REG_C,  0, 0,   1,     1, 1,   0},
 /* 0x5a */ {LD,    REG_E,  REG_D,  0, 0,   1,     1, 1,   0},
-/* 0x5b */ {LD,    REG_E,  REG_E,  0, 0,   1,     1, 1,   0},
+/* 0x5b */ {NOP,   NONE,   NONE,   0, 0,   1,     1, 1,   0},
 /* 0x5c */ {LD,    REG_E,  REG_H,  0, 0,   1,     1, 1,   0},
 /* 0x5d */ {LD,    REG_E,  REG_L,  0, 0,   1,     1, 1,   0},
 /* 0x5e */ {LD,    REG_E,  MEM_HL, 0, 0,   1,     2, 2,   0},
@@ -103,7 +103,7 @@ gb_instruction inst_table[] = {
 /* 0x61 */ {LD,    REG_H,  REG_C,  0, 0,   1,     1, 1,   0},
 /* 0x62 */ {LD,    REG_H,  REG_D,  0, 0,   1,     1, 1,   0},
 /* 0x63 */ {LD,    REG_H,  REG_E,  0, 0,   1,     1, 1,   0},
-/* 0x64 */ {LD,    REG_H,  REG_H,  0, 0,   1,     1, 1,   0},
+/* 0x64 */ {NOP,   NONE,   NONE,   0, 0,   1,     1, 1,   0},
 /* 0x65 */ {LD,    REG_H,  REG_L,  0, 0,   1,     1, 1,   0},
 /* 0x66 */ {LD,    REG_H,  MEM_HL, 0, 0,   1,     2, 2,   0},
 /* 0x67 */ {LD,    REG_H,  REG_A,  0, 0,   1,     1, 1,   0},
@@ -112,7 +112,7 @@ gb_instruction inst_table[] = {
 /* 0x6a */ {LD,    REG_L,  REG_D,  0, 0,   1,     1, 1,   0},
 /* 0x6b */ {LD,    REG_L,  REG_E,  0, 0,   1,     1, 1,   0},
 /* 0x6c */ {LD,    REG_L,  REG_H,  0, 0,   1,     1, 1,   0},
-/* 0x6d */ {LD,    REG_L,  REG_L,  0, 0,   1,     1, 1,   0},
+/* 0x6d */ {NOP,   NONE,   NONE,   0, 0,   1,     1, 1,   0},
 /* 0x6e */ {LD,    REG_L,  MEM_HL, 0, 0,   1,     2, 2,   0},
 /* 0x6f */ {LD,    REG_L,  REG_A,  0, 0,   1,     1, 1,   0},
 /* 0x70 */ {LD,    MEM_HL, REG_B,  0, 0,   1,     1, 1,   0},
@@ -130,7 +130,7 @@ gb_instruction inst_table[] = {
 /* 0x7c */ {LD,    REG_A,  REG_H,  0, 0,   1,     1, 1,   0},
 /* 0x7d */ {LD,    REG_A,  REG_L,  0, 0,   1,     1, 1,   0},
 /* 0x7e */ {LD,    REG_A,  MEM_HL, 0, 0,   1,     2, 2,   0},
-/* 0x7f */ {LD,    REG_A,  REG_A,  0, 0,   1,     1, 1,   0},
+/* 0x7f */ {NOP,   NONE,   NONE,   0, 0,   1,     1, 1,   0},
 /* 0x80 */ {ADD,   REG_A,  REG_B,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
 /* 0x81 */ {ADD,   REG_A,  REG_C,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
 /* 0x82 */ {ADD,   REG_A,  REG_D,  0, 0,   1,     1, 1,   INST_FLAG_AFFECTS_CC},
@@ -603,8 +603,11 @@ bool compile(gb_block *block, gb_memory *mem, uint16_t start_address) {
 
     instructions = g_list_reverse(instructions);
 
-    if(!optimize(&instructions))
-        return false;
+	if(!optimize_block(&instructions))
+		return false;
+
+//    if(!optimize(&instructions))
+//        return false;
 
     if(!optimize_cc(instructions))
         return false;
