@@ -31,9 +31,25 @@ bool is_no_mem_access(gb_instruction *inst) {
 	switch(inst->opcode) {
 	case NOP:
 	case ADD16:
+	case SWAP:
+	case DAA:
+	case CP:
+	case BIT:
+	case RST:
+	case JR:
+	case JP:
+	case RET:
+	case CALL:
+	case JP_BWD:
+	case JP_TARGET:
+	case LD16:
+	case RR:
+	case RL:
+	case RRC:
+	case RLC:
 		return true;
 	case LD:
-		if(/*inst->op1 == MEM_HL ||*/ inst->op2 == MEM_HL ||
+		if(/*inst->op1 == MEM_HL || inst->op2 == MEM_HL || */
 		   /*inst->op1 == MEM_INC_HL || inst->op2 == MEM_INC_HL || */
 		   /*inst->op1 == MEM_DEC_HL || inst->op2 == MEM_DEC_HL || */
 		   /*inst->op1 == MEM_C ||*/ inst->op2 == MEM_C ||
@@ -41,12 +57,26 @@ bool is_no_mem_access(gb_instruction *inst) {
 			return false;
 		
 		return true;
+
 	case AND:
+	case OR:
+	case XOR:
 		return inst->op2 == MEM_HL ? false : true;
+
+	case ADD:
+	case SUB:
+		return true;
+
+	case PUSH:
+	case POP:
+		return true;
 
 	case INC:
 	case DEC:
-		return inst->op1 == MEM_HL ? false : true;
+	case INC16:
+	case DEC16:
+//		return inst->op1 == MEM_HL ? false : true;
+		return true;
 
 	default:
 		return false;
@@ -62,9 +92,6 @@ bool is_jump_to_start(gb_instruction *inst, int byte_offset) {
 
 bool optimize_block(GList** instructions) {
 	for(GList *inst = *instructions; inst != NULL; inst = inst->next) {
-		if(DATA(inst)->address == 0x27a4)
-			printf("27a4: %#x\n", *(uint32_t*) DATA(inst)->args);
-
 		uint32_t *a = (uint32_t*) DATA(inst)->args;
 		if((*a & 0xffffff) == 0x13122a) {
 			printf("optimizing block @%#x (3)\n", DATA(*instructions)->address);
@@ -76,6 +103,8 @@ bool optimize_block(GList** instructions) {
 			g_free(inst->next->data);
 			*instructions = g_list_delete_link(*instructions, inst->next);
 		}
+
+		//TODO: pattern f0 41 e6 03 20 fa -> wait for stat mode 3
 	}
 
 	int byte_offset = 0;
@@ -129,6 +158,8 @@ bool optimize_block(GList** instructions) {
 
 				DATA(inst)->opcode = JP_BWD;
 				DATA(inst)->op2 = TARGET_1;							
+			} else {
+				printf("jp to start detected, could not optimize %#x\n", DATA(*instructions)->address);			
 			}
 		}
     }
