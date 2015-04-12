@@ -49,6 +49,21 @@ bool inst_nop(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     return true;
 }
 
+bool inst_jp_target(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+	switch(inst->op1) {
+	case TARGET_1:
+		| 9:
+		break;
+	case TARGET_2:
+		| 8:
+		break;
+	default:
+        printf("Invalid 2nd operand to JP/CALL\n");
+        return false;
+	}    
+	return true;
+}
+
 bool inst_jp(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | print "JP/CALL"
 
@@ -124,6 +139,20 @@ bool inst_jp(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     case MEM_0x38:
         | return 0x38
         break;
+	case TARGET_1:
+		if(inst->opcode == JP_FWD) {
+		| jmp >9
+		} else {
+		| jmp <9
+		}
+		break;
+	case TARGET_2:
+		if(inst->opcode == JP_FWD) {
+		| jmp >8
+		} else {
+		| jmp <8
+		}
+		break;
     default:
         printf("Invalid 2nd operand to JP/CALL\n");
         return false;
@@ -925,6 +954,12 @@ bool emit(gb_block *block, GList *inst) {
             if(!inst_dec(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
+		case JP_TARGET:
+			if(!inst_jp_target(Dst, DATA(inst), &cycles))
+                goto exit_fail;
+			break;
+		case JP_BWD:
+		case JP_FWD:
         case JP:
 		case JR:
         case CALL:

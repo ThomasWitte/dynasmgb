@@ -387,14 +387,12 @@ void printhex(uint64_t addr) {
     |          opcode A, [aMem + addr]
     ||         break; }
     ||     case MEM_DEC_HL:
-    |          pushfq
     |          and xL, 0xff
     |          and xH, 0xff
     |          mov tmp2, xH
     |          shl tmp2, 8
     |          mov tmp1, xL
     |          add tmp1, tmp2
-    |          popfq
     |          opcode A, [aMem+tmp1]
     |          dec tmp1
     |          mov L, tmp1b
@@ -402,14 +400,12 @@ void printhex(uint64_t addr) {
     |          mov H, tmp1b
     ||         break;
     ||     case MEM_INC_HL:
-    |          pushfq
     |          and xL, 0xff
     |          and xH, 0xff
     |          mov tmp2, xH
     |          shl tmp2, 8
     |          mov tmp1, xL
     |          add tmp1, tmp2
-    |          popfq
     |          opcode A, [aMem+tmp1]
     |          inc tmp1
     |          mov L, tmp1b
@@ -851,6 +847,35 @@ void printhex(uint64_t addr) {
     |          mov L, tmp1b
     |          shr tmp1, 8
     |          mov H, tmp1b
+    ||     } else {
+    ||         printf("Unsupported operand op2=%i to opcode\n", op2);
+    ||         return false;
+    ||     }
+    ||     break;
+    || case MEM_INC_DE:
+    ||     if(op2 == MEM_INC_HL) {
+    |          and xE, 0xff
+    |          and xD, 0xff
+    |          and xL, 0xff
+    |          and xH, 0xff
+    |          mov tmp2, xD
+    |          shl tmp2, 8
+    |          mov tmp1, xE
+    |          add tmp1, tmp2
+    |          mov tmp2, xH
+    |          shl tmp2, 8
+    |          mov tmp3, xL
+    |          add tmp3, tmp2
+	|          mov A, [aMem+tmp3]
+    |          write_byte tmp1, xA
+    |          inc tmp1
+    |          mov E, tmp1b
+    |          shr tmp1, 8
+    |          mov D, tmp1b
+    |          inc tmp3
+    |          mov L, tmp3b
+    |          shr tmp3, 8
+    |          mov H, tmp3b
     ||     } else {
     ||         printf("Unsupported operand op2=%i to opcode\n", op2);
     ||         return false;

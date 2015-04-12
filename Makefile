@@ -3,7 +3,7 @@ CFLAGS = -std=gnu11 -Wall -Wextra -Wno-unused-parameter `pkg-config --cflags gli
 LDFLAGS = -std=gnu11
 LIBS = -lSDL2 `pkg-config --libs glib-2.0`
 BIN = dynasmgb
-OBJ = core.o instructions.o lcd.o memory.o emit.o interrupt.o main.o memory_inspector.o sound.o savestate.o optimize.tab.o
+OBJ = core.o instructions.o lcd.o memory.o emit.o interrupt.o main.o memory_inspector.o sound.o savestate.o optimize.tab.o optimize.o
 
 all: CFLAGS += -O3 -flto
 all: LDFLAGS += -O3 -flto
