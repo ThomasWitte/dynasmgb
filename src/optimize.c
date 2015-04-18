@@ -2,7 +2,7 @@
 
 // Instruktion hat deterministisch ein immer gleiches Ergebnis, unabhängig von
 // Speicher, speziellen Registern, etc.
-bool is_const(gb_instruction *inst) {
+bool is_const(gb_instruction *inst, int opt_level) {
 	switch(inst->opcode) {
 	case NOP:
 		return true;
@@ -27,7 +27,7 @@ bool is_const(gb_instruction *inst) {
 
 // Instruktion ohne Speicherzugriff (lesen/schreiben), oder anderen Seiteneffekten,
 // die durch einen Interrupt beeinflusst werden können
-bool is_no_mem_access(gb_instruction *inst) {
+bool is_no_mem_access(gb_instruction *inst, int opt_level) {
 	switch(inst->opcode) {
 	case NOP:
 	case ADD16:
@@ -49,11 +49,14 @@ bool is_no_mem_access(gb_instruction *inst) {
 	case RLC:
 		return true;
 	case LD:
-		if(/*inst->op1 == MEM_HL || inst->op2 == MEM_HL || */
-		   /*inst->op1 == MEM_INC_HL || inst->op2 == MEM_INC_HL || */
-		   /*inst->op1 == MEM_DEC_HL || inst->op2 == MEM_DEC_HL || */
-		   /*inst->op1 == MEM_C ||*/ inst->op2 == MEM_C ||
-		   /*inst->op1 == MEM_8 ||*/ inst->op2 == MEM_8)
+		if(inst->op2 == MEM_C || inst->op2 == MEM_8)
+			return false;
+			
+		// schreibende Zugriffe und lesen aus HL ist meist ok
+	    if(opt_level < 3 && (inst->op1 == MEM_HL || inst->op2 == MEM_HL ||
+		   inst->op1 == MEM_INC_HL || inst->op2 == MEM_INC_HL ||
+		   inst->op1 == MEM_DEC_HL || inst->op2 == MEM_DEC_HL ||
+		   inst->op1 == MEM_C || inst->op1 == MEM_8))
 			return false;
 		
 		return true;
@@ -75,8 +78,9 @@ bool is_no_mem_access(gb_instruction *inst) {
 	case DEC:
 	case INC16:
 	case DEC16:
-//		return inst->op1 == MEM_HL ? false : true;
-		return true;
+		return opt_level == 3 ?
+		    true :
+		    (inst->op1 == MEM_HL ? false : true);
 
 	default:
 		return false;
@@ -90,7 +94,10 @@ bool is_jump_to_start(gb_instruction *inst, int byte_offset) {
 	return false;
 }
 
-bool optimize_block(GList** instructions) {
+bool optimize_block(GList** instructions, int opt_level) {
+    if(opt_level == 0) // no optimization
+        return true;
+    
 	for(GList *inst = *instructions; inst != NULL; inst = inst->next) {
 		uint32_t *a = (uint32_t*) DATA(inst)->args;
 		if((*a & 0xffffff) == 0x13122a) {
@@ -114,10 +121,10 @@ bool optimize_block(GList** instructions) {
 			bool can_optimize1 = true;
 			bool can_optimize2 = true;
 			for(GList *inst2 = *instructions; inst2 != inst; inst2 = inst2->next) {
-				if(!is_const(DATA(inst2)))
+				if(!is_const(DATA(inst2), opt_level))
 					can_optimize1 = false;
 
-				if(!is_no_mem_access(DATA(inst2)))
+				if(!is_no_mem_access(DATA(inst2), opt_level))
 					can_optimize2 = false;
 			}
 

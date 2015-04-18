@@ -4,6 +4,6 @@
 #include <stdbool.h>
 #include "emit.h"
 
-bool optimize_block(GList** instructions);
+bool optimize_block(GList** instructions, int opt_level);
 
 #endif

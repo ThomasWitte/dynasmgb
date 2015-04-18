@@ -6,7 +6,7 @@
 #include "savestate.h"
 
 void usage(const char *exe) {
-    printf("usage: %s [-b BREAKPOINT] file.gb\n", exe);
+    printf("usage: %s [-b BREAKPOINT] [-O LEVEL] file.gb\n", exe);
 }
 
 //gb_vm vm;
@@ -45,22 +45,37 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    int opt_level = 0;
     int breakpoint = -1;
-    if(strcmp(argv[1], "-b") == 0) {
-        // check arguments
-        if(argc < 4) {
+    int c;
+    while((c = getopt(argc, argv, "b:O:")) != -1) {
+        switch(c) {
+        case 'b':
+            sscanf(optarg, "%x", &breakpoint);
+            break;
+
+        case 'O':
+            sscanf(optarg, "%i", &opt_level);
+            break;
+
+        case '?':
+        default:
             usage(argv[0]);
             return -1;
         }
-
-        sscanf(argv[2], "%x", &breakpoint);
-        argv += 2;
-        argc -= 2;
     }
+
+    if(optind >= argc) {
+        usage(argv[0]);
+        return -1;
+    }
+
+    if(opt_level > 3) opt_level = 3;
+    if(opt_level < 0) opt_level = 0;
 
     // init memory
     gb_vm vm;
-    init_vm(&vm, argv[1]);
+    init_vm(&vm, argv[optind], opt_level);
 
 #ifdef DEBUG
     SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,

@@ -25,11 +25,13 @@ typedef struct {
     int frame_cnt;
     unsigned time_busy;
     unsigned last_time;
+    
+    int opt_level;
 } gb_vm;
 
 void free_block(gb_block *block);
 
-bool init_vm(gb_vm *vm, const char *filename);
+bool init_vm(gb_vm *vm, const char *filename, int opt_level);
 bool run_vm(gb_vm *vm);
 bool free_vm(gb_vm *vm);
 

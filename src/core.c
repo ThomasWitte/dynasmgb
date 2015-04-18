@@ -5,7 +5,7 @@ void free_block(gb_block *block) {
     munmap(block->mem, block->size);
 }
 
-bool init_vm(gb_vm *vm, const char *filename) {
+bool init_vm(gb_vm *vm, const char *filename, int opt_level) {
     if(!gb_memory_init(&vm->memory, filename))
         return false;
     
@@ -86,6 +86,8 @@ bool init_vm(gb_vm *vm, const char *filename) {
     vm->last_time = 0;
     vm->frame_cnt = 0;
 
+    vm->opt_level = opt_level;
+
     // init sound
     if(!init_sound(&vm->sound, &vm->memory))
         return false;
@@ -100,7 +102,7 @@ bool run_vm(gb_vm *vm) {
     // compile next block / get cached block
     if(vm->state.pc < 0x4000) { // first block
         if(vm->compiled_blocks[0][vm->state.pc].exec_count == 0) {
-            if(!compile(&vm->compiled_blocks[0][vm->state.pc], &vm->memory, vm->state.pc))
+            if(!compile(&vm->compiled_blocks[0][vm->state.pc], &vm->memory, vm->state.pc, vm->opt_level))
                 goto compile_error;
         }
         SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "execute function @%#x (count %i)\n", vm->state.pc,
@@ -111,7 +113,7 @@ bool run_vm(gb_vm *vm) {
     } else if(vm->state.pc < 0x8000) { // execute function in rom
         uint8_t bank = vm->memory.current_rom_bank;
         if(vm->compiled_blocks[bank][vm->state.pc-0x4000].exec_count == 0) {
-            if(!compile(&vm->compiled_blocks[bank][vm->state.pc-0x4000], &vm->memory, vm->state.pc))
+            if(!compile(&vm->compiled_blocks[bank][vm->state.pc-0x4000], &vm->memory, vm->state.pc, vm->opt_level))
                 goto compile_error;
         }
         SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "execute function @%#x (count %i)\n", vm->state.pc,
@@ -121,7 +123,7 @@ bool run_vm(gb_vm *vm) {
         SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "finished\n");
     } else if(vm->state.pc >= 0xff80) { // execute function in internal ram, e.g. for dma
         if(vm->highmem_blocks[vm->state.pc-0xff80].exec_count == 0) {
-            if(!compile(&vm->highmem_blocks[vm->state.pc-0xff80], &vm->memory, vm->state.pc))
+            if(!compile(&vm->highmem_blocks[vm->state.pc-0xff80], &vm->memory, vm->state.pc, vm->opt_level))
                 goto compile_error;
         }
         SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "execute function @%#x (count %i)\n", vm->state.pc,
@@ -131,7 +133,7 @@ bool run_vm(gb_vm *vm) {
         SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "finished\n");
     } else { // execute function in ram
         gb_block temp = {0};
-        if(!compile(&temp, &vm->memory, vm->state.pc))
+        if(!compile(&temp, &vm->memory, vm->state.pc, vm->opt_level))
             goto compile_error;
         SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "execute function in ram\n");
         vm->state.pc = temp.func(&vm->state);

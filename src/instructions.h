@@ -9,7 +9,7 @@
 extern GList* opt_result;
 
 // compiles block starting at start_address to gb_block
-bool compile(gb_block *block, gb_memory *mem, uint16_t start_address);
+bool compile(gb_block *block, gb_memory *mem, uint16_t start_address, int opt_level);
 int yylex();
 void yyerror (char const *s);
 

@@ -73,7 +73,7 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
         gb_vm *vm = (gb_vm*)state;
 
         // invalidate compiled blocks
-        for(int i = 0; i < addr - 0xff80; ++i) {
+        for(unsigned i = 0; i < addr - 0xff80; ++i) {
             if(vm->highmem_blocks[i].exec_count != 0 &&
                vm->highmem_blocks[i].end_address > addr) {
                 

@@ -566,7 +566,7 @@ void yyerror (char const *s)
 }
 
 // compiles block starting at start_address to gb_block
-bool compile(gb_block *block, gb_memory *mem, uint16_t start_address) {
+bool compile(gb_block *block, gb_memory *mem, uint16_t start_address, int opt_level) {
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "compile new block @%#x\n", start_address);
 
     GList* instructions = NULL;
@@ -603,7 +603,7 @@ bool compile(gb_block *block, gb_memory *mem, uint16_t start_address) {
 
     instructions = g_list_reverse(instructions);
 
-	if(!optimize_block(&instructions))
+	if(!optimize_block(&instructions, opt_level))
 		return false;
 
 //    if(!optimize(&instructions))
