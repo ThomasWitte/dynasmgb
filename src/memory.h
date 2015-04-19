@@ -61,7 +61,8 @@ typedef struct {
     bool ime;
     
     // cpu is in halt state
-    bool halt;
+    uint32_t halt;
+    uint8_t halt_arg;
 } gb_state;
 
 // emulate write through mbc

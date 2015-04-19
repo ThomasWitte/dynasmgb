@@ -870,7 +870,21 @@ bool inst_swap(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 bool inst_halt(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | print "HALT"
     *cycles += inst->cycles;
-    | mov byte state->halt, 1
+    switch(inst->op1) {
+    case NONE:
+        | mov dword state->halt, 1
+        break;
+    case WAIT_STAT3:
+        | mov dword state->halt, WAIT_STAT3
+        break;
+    case WAIT_LY:
+        | mov dword state->halt, WAIT_LY
+        | mov byte state->halt_arg, inst->args[3]
+        break;
+    default:
+        printf("Invalid operand to halt.\n");
+        return false;
+    }
     | add qword state->inst_count, *cycles
     | return inst->address + inst->bytes
     return true;

@@ -19,7 +19,8 @@ typedef struct {
           CC_Z, CC_C, CC_NZ, CC_NC,
           MEM_0x00, MEM_0x08, MEM_0x10, MEM_0x18, MEM_0x20, MEM_0x28, MEM_0x30, MEM_0x38,
           BIT_0, BIT_1, BIT_2, BIT_3, BIT_4, BIT_5, BIT_6, BIT_7,
-          TARGET_1, TARGET_2
+          TARGET_1, TARGET_2,
+          WAIT_LY, WAIT_STAT3
          } op1, op2;
     uint8_t *args;
 	uint16_t address;

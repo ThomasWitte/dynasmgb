@@ -196,7 +196,8 @@ bool run_vm(gb_vm *vm) {
     #endif
 
                 // end halt mode
-                vm->state.halt = false;
+                if(vm->state.halt == 1)
+                    vm->state.halt = 0;
 
                 // save PC to stack
                 vm->state._sp -= 2;
@@ -208,13 +209,24 @@ bool run_vm(gb_vm *vm) {
                 //    render_frame(vm->win);
                 //}
             }
+            
+            if(vm->state.halt == WAIT_STAT3 && (vm->memory.mem[0xff41] & 0x3) == 0x3) {
+                // end wait for stat mode 3
+                vm->state.halt = 0;
+            }
+            
+            if(vm->state.halt == WAIT_LY && vm->memory.mem[0xff44] == vm->state.halt_arg) {
+                // end wait for ly
+                vm->state.halt = 0;
+            }
+            
             vm->state.next_update = next_update_time(&vm->state);
         }
         
-        if(vm->state.halt) {
+        if(vm->state.halt != 0) {
             vm->state.inst_count = (vm->state.inst_count < vm->state.next_update ? vm->state.next_update : vm->state.inst_count + 16);
         }
-    } while(vm->state.halt);
+    } while(vm->state.halt != 0);
     
     return true;
     

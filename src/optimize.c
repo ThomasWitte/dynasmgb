@@ -19,6 +19,7 @@ bool is_const(gb_instruction *inst, int opt_level) {
 		
 		return true;
 	case AND:
+    case CP:
 		return inst->op2 == MEM_HL ? false : true;
 	default:
 		return false;
@@ -51,7 +52,11 @@ bool is_no_mem_access(gb_instruction *inst, int opt_level) {
 	case LD:
 		if(inst->op2 == MEM_C || inst->op2 == MEM_8)
 			return false;
-			
+	
+	    // meist im Zusammenhang mit einem memcpy -> ok
+	    if(opt_level == 3 && inst->op1 == MEM_INC_DE)
+	        return true;    
+	    
 		// schreibende Zugriffe und lesen aus HL ist meist ok
 	    if(opt_level < 3 && (inst->op1 == MEM_HL || inst->op2 == MEM_HL ||
 		   inst->op1 == MEM_INC_HL || inst->op2 == MEM_INC_HL ||
@@ -100,18 +105,44 @@ bool optimize_block(GList** instructions, int opt_level) {
     
 	for(GList *inst = *instructions; inst != NULL; inst = inst->next) {
 		uint32_t *a = (uint32_t*) DATA(inst)->args;
+
+    	// pattern is LD A,HL+; LD (DE),A; INC DE -> LD DE+, HL+
 		if((*a & 0xffffff) == 0x13122a) {
 			printf("optimizing block @%#x (3)\n", DATA(*instructions)->address);
-			// pattern is LD A,HL+; LD (DE),A; INC DE -> LD DE+, HL+
 			DATA(inst)->op1 = MEM_INC_DE;
 			DATA(inst)->cycles = 6;
+			DATA(inst)->bytes = 3;
 			g_free(inst->next->data);
 			*instructions = g_list_delete_link(*instructions, inst->next);
 			g_free(inst->next->data);
 			*instructions = g_list_delete_link(*instructions, inst->next);
 		}
 
-		//TODO: pattern f0 41 e6 03 20 fa -> wait for stat mode 3
+		//pattern f0 41 e6 03 20 fa -> wait for stat mode 3
+		if((*a) == 0x03e641f0 && (*(a+1) & 0xffff) == 0xfa20) {
+		    printf("optimizing block @%#x (4)\n", DATA(*instructions)->address);
+		    DATA(inst)->opcode = HALT;
+			DATA(inst)->op1 = WAIT_STAT3;
+			DATA(inst)->cycles = 0;
+			DATA(inst)->bytes = 6;
+			g_free(inst->next->data);
+			*instructions = g_list_delete_link(*instructions, inst->next);
+			g_free(inst->next->data);
+			*instructions = g_list_delete_link(*instructions, inst->next);
+		}
+		
+		//pattern f0 44 fe ?? 20 fa -> wait for ly
+		if((*a & 0x00ffffff) == 0xfe44f0 && (*(a+1) & 0xffff) == 0xfa20) {
+		    printf("optimizing block @%#x (5)\n", DATA(*instructions)->address);
+		    DATA(inst)->opcode = HALT;
+			DATA(inst)->op1 = WAIT_LY;
+			DATA(inst)->cycles = 0;
+			DATA(inst)->bytes = 6;
+			g_free(inst->next->data);
+			*instructions = g_list_delete_link(*instructions, inst->next);
+			g_free(inst->next->data);
+			*instructions = g_list_delete_link(*instructions, inst->next);
+		}
 	}
 
 	int byte_offset = 0;
