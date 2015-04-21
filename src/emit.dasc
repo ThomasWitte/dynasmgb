@@ -206,7 +206,7 @@ bool inst_ret(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 
     | add qword state->inst_count, *cycles + inst->cycles;
     | and xSP, 0xffff
-    | mov tmp1, [aMem+xSP]
+    | mov tmp1w, [aMem+xSP]
     | inc SP
     | inc SP
     | and tmp1, 0xffff
@@ -709,6 +709,13 @@ bool inst_srl(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     return true;
 }
 
+bool inst_scf(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
+    | print "SCF"
+    | stc
+    *cycles += inst->cycles;
+    return true;
+}
+
 bool inst_daa(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 // source: http://stackoverflow.com/questions/8119577/z80-daa-instruction
 	| print "DAA"
@@ -1072,6 +1079,10 @@ bool emit(gb_block *block, GList *inst) {
             break;
         case SBC:
             if(!inst_sbc(Dst, DATA(inst), &cycles))
+                goto exit_fail;
+            break;
+        case SCF:
+            if(!inst_scf(Dst, DATA(inst), &cycles))
                 goto exit_fail;
             break;
         case SET:

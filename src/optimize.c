@@ -143,6 +143,19 @@ bool optimize_block(GList** instructions, int opt_level) {
 			g_free(inst->next->data);
 			*instructions = g_list_delete_link(*instructions, inst->next);
 		}
+		
+		//pattern f0 00 f0 00 -> repeated read of jopad register
+		if((*a) == 0x00f000f0) {
+		    printf("optimizing block @%#x (6)\n", DATA(*instructions)->address);
+			DATA(inst)->cycles += 3;
+			DATA(inst)->bytes += 2;
+			DATA(inst)->args = DATA(inst->next)->args;
+			g_free(inst->next->data);
+			*instructions = g_list_delete_link(*instructions, inst->next);
+			if(inst->prev)
+			    //apply pattern to this instruction again
+			    inst = inst->prev;
+		}
 	}
 
 	int byte_offset = 0;
