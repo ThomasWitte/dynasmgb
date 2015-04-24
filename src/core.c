@@ -65,7 +65,7 @@ bool init_vm(gb_vm *vm, const char *filename, int opt_level) {
 	vm->memory.mem[0xff4b] = 0x00;
 	vm->memory.mem[0xffff] = 0x00;
 	
-	for(int block = 0; block < 4; ++block)
+	for(int block = 0; block < MAX_ROM_BANKS; ++block)
 	    for(int i = 0; i < 0x4000; ++i) {
 	        vm->compiled_blocks[block][i].exec_count = 0;
 	        vm->compiled_blocks[block][i].func = 0;
@@ -251,7 +251,7 @@ void show_statistics(gb_vm *vm) {
 	uint64_t most_executed_addr = 0;
 	uint64_t total_executed = 0;
 
-	for(int block = 0; block < 4; ++block)
+	for(int block = 0; block < MAX_ROM_BANKS; ++block)
 	    for(int i = 0; i < 0x4000; ++i) {
 			if(vm->compiled_blocks[block][i].exec_count > 0) {
 				++compiled_functions;
@@ -272,7 +272,7 @@ void show_statistics(gb_vm *vm) {
 bool free_vm(gb_vm *vm) {
 	show_statistics(vm);
 
-	for(int block = 0; block < 4; ++block)
+	for(int block = 0; block < MAX_ROM_BANKS; ++block)
 	    for(int i = 0; i < 0x4000; ++i)
             if(vm->compiled_blocks[block][i].exec_count > 0)
 	            free_block(&vm->compiled_blocks[block][i]);

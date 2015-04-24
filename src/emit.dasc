@@ -251,11 +251,11 @@ bool inst_ld16(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 //            | mov L, [aMem + xSP + (int8_t)inst->args[1]]
             | mov tmp1, xSP
             | add tmp1, (int8_t)inst->args[1]
-            | mov xH, tmp1
-            | and xH, 0xff
-            | shr tmp1, 8
             | mov xL, tmp1
             | and xL, 0xff
+            | shr tmp1, 8
+            | mov xH, tmp1
+            | and xH, 0xff
         } else {
             printf("Invalid 2nd operand to LD16\n");
             return false;

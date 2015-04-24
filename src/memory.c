@@ -52,7 +52,27 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
             break;
         case MBC2:
             break;
+        case MBC3_RAM_BAT:
         case MBC3:
+            if(addr >= 0x6000) {
+                printf("write to latch clock data\n");
+            } else if(addr >= 0x4000) {
+                if(value < 4) {
+                    gb_memory_change_ram_bank(state->mem, value);
+                } else {
+                    printf("RTC not supported yet!\n");
+                }
+            } else if(addr >= 0x2000) {
+                int bank = (value & 0x7f);
+                if(bank == 0) {
+                    bank = 1;
+                }
+                
+                LOG_DEBUG("change rom bank to %i\n", bank);
+                gb_memory_change_rom_bank(state->mem, bank);
+            } else {
+                printf("ram/timer enable not supported yet!\n");
+            }
             break;
         case MBC5:
             break;

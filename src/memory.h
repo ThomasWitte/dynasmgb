@@ -15,7 +15,13 @@ typedef struct {
     uint8_t* mem;
     const char* filename;
     int fd;
-    enum {MBC_NONE = 0x00, MBC1 = 0x01, MBC2 = 0x05, MBC3 = 0x11, MBC5 = 0x19} mbc;
+    enum {MBC_NONE = 0x00,
+          MBC1 = 0x01,
+          MBC2 = 0x05,
+          MBC3 = 0x11,
+          MBC3_RAM_BAT = 0x13,
+          MBC5 = 0x19
+         } mbc;
     uint8_t mbc_mode;
     uint8_t mbc_data;
     uint8_t current_rom_bank;

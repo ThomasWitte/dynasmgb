@@ -37,7 +37,7 @@ bool savestate_load(gb_vm *vm, const char* filename) {
 
     // repair pointers
     
-    for(int i = 0; i < 4; ++i)
+    for(int i = 0; i < MAX_ROM_BANKS; ++i)
         for(int j = 0; j < 0x4000; ++j) {
             vm->compiled_blocks[i][j] = temp.compiled_blocks[i][j];
         }

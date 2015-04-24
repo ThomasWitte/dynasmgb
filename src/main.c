@@ -74,8 +74,8 @@ int main(int argc, char *argv[]) {
     if(opt_level < 0) opt_level = 0;
 
     // init memory
-    gb_vm vm;
-    init_vm(&vm, argv[optind], opt_level);
+    gb_vm *vm = malloc(sizeof(gb_vm));
+    init_vm(vm, argv[optind], opt_level);
 
 #ifdef DEBUG
     SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
@@ -86,25 +86,25 @@ int main(int argc, char *argv[]) {
     bool debug_mode = false;
     memory_inspector_t inspector;
 
-    if(vm.state.pc == breakpoint) {
+    if(vm->state.pc == breakpoint) {
         debug_mode = true;
         SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
                            SDL_LOG_PRIORITY_VERBOSE);
 
-        memory_inspector_init(&inspector, &vm.memory);
+        memory_inspector_init(&inspector, &vm->memory);
         memory_inspector_update(&inspector);
         printf("debugging enabled\n");
     }
 
     // start emulation
-    while(debug_mode || run_vm(&vm)) {
-        if(vm.state.pc == breakpoint) {
+    while(debug_mode || run_vm(vm)) {
+        if(vm->state.pc == breakpoint) {
             if(!debug_mode) {
                 debug_mode = true;
                 SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
                                    SDL_LOG_PRIORITY_VERBOSE);
 
-                memory_inspector_init(&inspector, &vm.memory);
+                memory_inspector_init(&inspector, &vm->memory);
                 memory_inspector_update(&inspector);
                 printf("debugging enabled\n");
             }
@@ -115,28 +115,28 @@ int main(int argc, char *argv[]) {
             case SDL_KEYUP:
                 switch(evt.key.keysym.sym) {
                 case SDLK_a:
-                    vm.state.keys.state &= ~GB_KEY_A;
+                    vm->state.keys.state &= ~GB_KEY_A;
                     break;
                 case SDLK_b:
-                    vm.state.keys.state &= ~GB_KEY_B;
+                    vm->state.keys.state &= ~GB_KEY_B;
                     break;
                 case SDLK_UP:
-                    vm.state.keys.state &= ~GB_KEY_UP;
+                    vm->state.keys.state &= ~GB_KEY_UP;
                     break;
                 case SDLK_DOWN:
-                    vm.state.keys.state &= ~GB_KEY_DOWN;
+                    vm->state.keys.state &= ~GB_KEY_DOWN;
                     break;
                 case SDLK_LEFT:
-                    vm.state.keys.state &= ~GB_KEY_LEFT;
+                    vm->state.keys.state &= ~GB_KEY_LEFT;
                     break;
                 case SDLK_RIGHT:
-                    vm.state.keys.state &= ~GB_KEY_RIGHT;
+                    vm->state.keys.state &= ~GB_KEY_RIGHT;
                     break;
                 case SDLK_y: // start button
-                    vm.state.keys.state &= ~GB_KEY_START;
+                    vm->state.keys.state &= ~GB_KEY_START;
                     break;
                 case SDLK_x: // select button
-                    vm.state.keys.state &= ~GB_KEY_SELECT;
+                    vm->state.keys.state &= ~GB_KEY_SELECT;
                     break;
                 default:
                     break;
@@ -145,41 +145,41 @@ int main(int argc, char *argv[]) {
             case SDL_KEYDOWN:
                 switch(evt.key.keysym.sym) {
                 case SDLK_a:
-                    vm.state.keys.state |= GB_KEY_A;
-                    vm.memory.mem[0xff0f] |= 0x10;
+                    vm->state.keys.state |= GB_KEY_A;
+                    vm->memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_b:
-                    vm.state.keys.state |= GB_KEY_B;
-                    vm.memory.mem[0xff0f] |= 0x10;
+                    vm->state.keys.state |= GB_KEY_B;
+                    vm->memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_UP:
-                    vm.state.keys.state |= GB_KEY_UP;
-                    vm.memory.mem[0xff0f] |= 0x10;
+                    vm->state.keys.state |= GB_KEY_UP;
+                    vm->memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_DOWN:
-                    vm.state.keys.state |= GB_KEY_DOWN;
-                    vm.memory.mem[0xff0f] |= 0x10;
+                    vm->state.keys.state |= GB_KEY_DOWN;
+                    vm->memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_LEFT:
-                    vm.state.keys.state |= GB_KEY_LEFT;
-                    vm.memory.mem[0xff0f] |= 0x10;
+                    vm->state.keys.state |= GB_KEY_LEFT;
+                    vm->memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_RIGHT:
-                    vm.state.keys.state |= GB_KEY_RIGHT;
-                    vm.memory.mem[0xff0f] |= 0x10;
+                    vm->state.keys.state |= GB_KEY_RIGHT;
+                    vm->memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_y: // start button
-                    vm.state.keys.state |= GB_KEY_START;
-                    vm.memory.mem[0xff0f] |= 0x10;
+                    vm->state.keys.state |= GB_KEY_START;
+                    vm->memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_x: // select button
-                    vm.state.keys.state |= GB_KEY_SELECT;
-                    vm.memory.mem[0xff0f] |= 0x10;
+                    vm->state.keys.state |= GB_KEY_SELECT;
+                    vm->memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_d: // enter debugging
                     if(debug_mode) {
                         debug_mode = false;
-                        vm.next_frame_time = SDL_GetTicks() + 17;
+                        vm->next_frame_time = SDL_GetTicks() + 17;
                         SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
                                            SDL_LOG_PRIORITY_ERROR);
 
@@ -190,14 +190,14 @@ int main(int argc, char *argv[]) {
                         SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
                                            SDL_LOG_PRIORITY_VERBOSE);
 
-                        memory_inspector_init(&inspector, &vm.memory);
+                        memory_inspector_init(&inspector, &vm->memory);
                         memory_inspector_update(&inspector);
                         printf("debugging enabled\n");
                     }
                     break;
                 case SDLK_s: // step block
                     if(debug_mode) {
-                        if(run_vm(&vm) == false)
+                        if(run_vm(vm) == false)
                             goto end_program;
                         memory_inspector_update(&inspector);
                     }
@@ -208,9 +208,9 @@ int main(int argc, char *argv[]) {
                                            SDL_LOG_PRIORITY_ERROR);
 
                         do {
-                            if(run_vm(&vm) == false)
+                            if(run_vm(vm) == false)
                                 goto end_program;
-                        } while(vm.state.pc != 0x40);
+                        } while(vm->state.pc != 0x40);
 
                         SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
                                            SDL_LOG_PRIORITY_VERBOSE);
@@ -219,14 +219,14 @@ int main(int argc, char *argv[]) {
                     }
                     break;
                 case SDLK_F2: // save state
-                    if(savestate_save(&vm, "quicksave.dat")) {
+                    if(savestate_save(vm, "quicksave.dat")) {
                         printf("quicksave.dat saved.\n");
                     } else {
                         printf("quicksave failed!\n");
                     }
                     break;
                 case SDLK_F3: // load state
-                    if(savestate_load(&vm, "quicksave.dat")) {
+                    if(savestate_load(vm, "quicksave.dat")) {
                         printf("quicksave.dat loaded.\n");
                     } else {
                         printf("quickload failed!\n");
@@ -254,5 +254,6 @@ end_program:
     printf("exiting...\n");
 
     // free memory
-    free_vm(&vm);
+    free_vm(vm);
+    free(vm);
 }
