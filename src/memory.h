@@ -13,11 +13,14 @@
 
 typedef struct {
     uint8_t* mem;
+    uint8_t* ram_banks;
     const char* filename;
     int fd;
     enum {MBC_NONE = 0x00,
           MBC1 = 0x01,
+          MBC1_RAM_BAT = 0x03,
           MBC2 = 0x05,
+          MBC3_TIMER_RAM_BAT = 0x10,
           MBC3 = 0x11,
           MBC3_RAM_BAT = 0x13,
           MBC5 = 0x19
@@ -26,6 +29,7 @@ typedef struct {
     uint8_t mbc_data;
     uint8_t current_rom_bank;
     uint8_t current_ram_bank;
+    bool rtc_access;
 } gb_memory;
 
 typedef struct {
@@ -82,6 +86,12 @@ void gb_memory_change_rom_bank(gb_memory *mem, int bank);
 
 // change ram bank to bank if supported
 void gb_memory_change_ram_bank(gb_memory *mem, int bank);
+
+// prepare rtc read
+void gb_memory_access_rtc(gb_memory *mem, int bank);
+
+// update rtc time
+void gb_memory_update_rtc_time(gb_memory *mem, int value);
 
 // free memory again
 bool gb_memory_free(gb_memory *mem);

@@ -78,8 +78,10 @@ render_back(uint32_t *buf, uint8_t* addr_sp)
             int sposx = addr_sp[0xfe01 + 4*sprite] - 8;
             
             // TODO: support 8x16 sprites
-            uint8_t tile_idx = sprite_8x16_mode ? (addr_sp[0xfe02 + 4*sprite]|0x01) : addr_sp[0xfe02 + 4*sprite];
             uint8_t flags = addr_sp[0xfe03 + 4*sprite];
+            uint8_t tile_idx = sprite_8x16_mode ?
+                (flags & 0x40 ? addr_sp[0xfe02 + 4*sprite]|0x01 : addr_sp[0xfe02 + 4*sprite]&~0x01) :
+                addr_sp[0xfe02 + 4*sprite];
             uint8_t obp = (flags & 0x10 ? addr_sp[0xff49] : addr_sp[0xff48]);
 
             if(sposy > y-8 && sposy <= y) {
@@ -87,6 +89,26 @@ render_back(uint32_t *buf, uint8_t* addr_sp)
                 for(int x = 0; x < 8; ++x) {
                     int px_x = (flags & 0x20 ? 7-x : x) + sposx;
                     int px_y = (flags & 0x40 ? 7-y+sposy : y-sposy);
+
+                    int col = ((addr_sp[0x8000 + 16*tile_idx + 2*px_y] >> (7-x)) & 1) +
+                              (((addr_sp[0x8001 + 16*tile_idx + 2*px_y] >> (7-x)) & 1) << 1);
+                              
+                    if(col != 0 && px_x >= 0 && px_x < 168) {
+                        if(!(flags & 0x80) || buf[y*160 + px_x] == pal_grey[0]) {
+                            buf[y*160 + px_x] = pal_grey[obp>>(col<<1)&3];
+                        }
+                    }
+                }
+            }
+            
+            if(sprite_8x16_mode && sposy > y-16 && sposy <= y-8) {
+                tile_idx = (flags & 0x40 ?
+                    addr_sp[0xfe02 + 4*sprite]&~0x01 :
+                    addr_sp[0xfe02 + 4*sprite]|0x01);
+                // sprite wird in zeile angezeigt
+                for(int x = 0; x < 8; ++x) {
+                    int px_x = (flags & 0x20 ? 7-x : x) + sposx;
+                    int px_y = (flags & 0x40 ? 15-y+sposy : y-8-sposy);
 
                     int col = ((addr_sp[0x8000 + 16*tile_idx + 2*px_y] >> (7-x)) & 1) +
                               (((addr_sp[0x8001 + 16*tile_idx + 2*px_y] >> (7-x)) & 1) << 1);

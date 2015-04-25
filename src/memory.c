@@ -31,6 +31,7 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
         switch(state->mem->mbc) {
         case MBC_NONE:
             break;
+        case MBC1_RAM_BAT:
         case MBC1:
             if(addr >= 0x6000) {
                 state->mem->mbc_mode = value & 0x01;
@@ -52,15 +53,16 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
             break;
         case MBC2:
             break;
+        case MBC3_TIMER_RAM_BAT:
         case MBC3_RAM_BAT:
         case MBC3:
             if(addr >= 0x6000) {
-                printf("write to latch clock data\n");
+                gb_memory_update_rtc_time(state->mem, value);
             } else if(addr >= 0x4000) {
-                if(value < 4) {
+                if(value <= 4) {
                     gb_memory_change_ram_bank(state->mem, value);
                 } else {
-                    printf("RTC not supported yet!\n");
+                    gb_memory_access_rtc(state->mem, value);
                 }
             } else if(addr >= 0x2000) {
                 int bank = (value & 0x7f);
@@ -71,7 +73,7 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
                 LOG_DEBUG("change rom bank to %i\n", bank);
                 gb_memory_change_rom_bank(state->mem, bank);
             } else {
-                printf("ram/timer enable not supported yet!\n");
+                //printf("ram/timer enable not supported yet!\n");
             }
             break;
         case MBC5:
@@ -137,12 +139,15 @@ bool gb_memory_init(gb_memory *mem, const char *filename) {
         return false;
     }
 
+    mem->ram_banks = malloc(MAX_RAM_BANKS * 0x2000);
+
     mem->filename = filename;
     mem->mbc = mem->mem[0x0147];
     mem->mbc_mode = 0;
     mem->mbc_data = 0;
     mem->current_rom_bank = 1;
     mem->current_ram_bank = 0;
+    mem->rtc_access = false;
     
     return true;
 }
@@ -170,11 +175,34 @@ void gb_memory_change_rom_bank(gb_memory *mem, int bank) {
 
 // change ram bank to bank if supported
 void gb_memory_change_ram_bank(gb_memory *mem, int bank) {
+    if(mem->current_ram_bank == bank)
+        return;
+
+    if(!mem->rtc_access) {
+        memcpy(mem->ram_banks + mem->current_ram_bank * 0x2000, mem->mem + 0xa000, 0x2000);
+    }
+    memcpy(mem->mem + 0xa000, mem->ram_banks + mem->current_ram_bank * 0x2000, 0x2000);
+    mem->rtc_access = false;
+    
+    mem->current_ram_bank = bank;
+    
     return;
+}
+
+void gb_memory_access_rtc(gb_memory *mem, int elt) {
+    // TODO: implement rtc;
+    mem->mem[0xa000] = 0;
+    mem->rtc_access = true;
+}
+
+void gb_memory_update_rtc_time(gb_memory *mem, int value) {
+    // TODO: implement
 }
 
 // free memory again
 bool gb_memory_free(gb_memory *mem) {
+    free(mem->ram_banks);
+    
     close(mem->fd);
     
     if(munmap(mem->mem, 0x8000) != 0 ||

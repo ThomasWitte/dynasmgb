@@ -13,6 +13,7 @@
 #include "sound.h"
 
 #define MAX_ROM_BANKS 128
+#define MAX_RAM_BANKS 4
 
 typedef struct {
     gb_state state;
