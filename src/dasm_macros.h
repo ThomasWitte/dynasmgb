@@ -340,7 +340,7 @@ void printhex(uint64_t addr) {
     |          opcode A, L
     ||         break;
     ||     case IMM8:
-    |          opcode A, inst->args[1]
+    |          opcode A, (int8_t)inst->args[1]
     ||         break;
     ||     case MEM_8:
     |          opcode A, [aMem + (0xff00+inst->args[1])]

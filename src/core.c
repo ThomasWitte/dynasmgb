@@ -21,6 +21,7 @@ bool init_vm(gb_vm *vm, const char *filename, int opt_level) {
     vm->state.l = 0x4d;
     vm->state._sp = 0xfffe;
     vm->state.pc = 0x100;
+    vm->state.f_subtract = false;
     
     vm->state.flags = 0x0;
     
@@ -142,11 +143,11 @@ bool run_vm(gb_vm *vm) {
     }
     
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "ioregs: STAT=%02x LY=%02x IF=%02x IE=%02x\n", vm->memory.mem[0xff41], vm->memory.mem[0xff44], vm->memory.mem[0xff0f], vm->memory.mem[0xffff]);
-    if(vm->state._sp < 0xfff0)
-        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "stack: %02x %02x |%02x %02x %02x %02x\n",
-                     vm->memory.mem[vm->state._sp-2], vm->memory.mem[vm->state._sp-1],
-                     vm->memory.mem[vm->state._sp], vm->memory.mem[vm->state._sp+1],
-                     vm->memory.mem[vm->state._sp+2], vm->memory.mem[vm->state._sp+3]);
+//    if(vm->state._sp < 0xfff0)
+//        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "stack: %02x %02x |%02x %02x %02x %02x\n",
+//                     vm->memory.mem[vm->state._sp-2], vm->memory.mem[vm->state._sp-1],
+//                     vm->memory.mem[vm->state._sp], vm->memory.mem[vm->state._sp+1],
+//                     vm->memory.mem[vm->state._sp+2], vm->memory.mem[vm->state._sp+3]);
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "register: A=%02x, BC=%02x%02x, DE=%02x%02x, HL=%02x%02x, SP=%04x\n",
            vm->state.a, vm->state.b, vm->state.c, vm->state.d, vm->state.e,
            vm->state.h, vm->state.l, vm->state._sp);

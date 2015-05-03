@@ -49,6 +49,7 @@ typedef struct {
 
     // register
     uint8_t a, b, c, d, e, h, l;
+    bool f_subtract;
     uint16_t _sp;
     uint16_t pc;
     uint64_t flags;
