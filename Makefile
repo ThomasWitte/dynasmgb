@@ -1,9 +1,13 @@
 CC = gcc
+CXX = g++
 CFLAGS = -std=gnu11 -Wall -Wextra -Wno-unused-parameter `pkg-config --cflags glib-2.0`
+CXXFLAGS = -std=c++14 -Wall -Wextra -Wno-unused-parameter `pkg-config --cflags glib-2.0`
 LDFLAGS = -std=gnu11
-LIBS = -lSDL2 `pkg-config --libs glib-2.0`
+LIBS = -lSDL2 `pkg-config --libs glib-2.0` -lm -lstdc++
 BIN = dynasmgb
-OBJ = core.o instructions.o lcd.o memory.o emit.o interrupt.o main.o memory_inspector.o sound.o savestate.o optimize.tab.o optimize.o
+OBJ = core.o instructions.o lcd.o memory.o emit.o interrupt.o main.o \
+      memory_inspector.o savestate.o sound_blargg.o optimize.tab.o optimize.o \
+      Blip_Buffer.o Gb_Apu.o Gb_Oscs.o Multi_Buffer.o
 
 all: CFLAGS += -O3 -flto
 all: LDFLAGS += -O3 -flto
@@ -22,6 +26,12 @@ $(BIN): $(OBJ)
 	
 %.o: src/%.c src/optimize.tab.h
 	$(CC) -c $(CFLAGS) $<
+
+%.o: src/%.cpp src/optimize.tab.h
+	$(CXX) -c $(CXXFLAGS) -I src/Gb_Snd_Emu-0.1.4/gb_apu $<
+	
+%.o: src/Gb_Snd_Emu-0.1.4/gb_apu/%.cpp
+	$(CXX) -c $(CXXFLAGS) -I src/Gb_Snd_Emu-0.1.4/gb_apu $<
 	
 src/%.c: src/%.dasc
 	lua dynasm/dynasm.lua $(DYNASMFLAGS) -I src -o $@ $<

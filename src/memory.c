@@ -6,6 +6,7 @@
 #include <string.h>
 #include "memory.h"
 #include "core.h"
+#include "sound.h"
 
 uint8_t get_joypad_state(gb_keys *keys, uint8_t value) {
     uint8_t result = 0;
@@ -31,6 +32,8 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
         switch(state->mem->mbc) {
         case MBC_NONE:
             break;
+        case MBC2_BAT:
+        case MBC2:
         case MBC1_RAM_BAT:
         case MBC1:
             if(addr >= 0x6000) {
@@ -50,8 +53,6 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
                 LOG_DEBUG("change rom bank to %i\n", bank);
                 gb_memory_change_rom_bank(state->mem, bank);
             }
-            break;
-        case MBC2:
             break;
         case MBC3_TIMER_RAM_BAT:
         case MBC3_RAM_BAT:
@@ -76,7 +77,18 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
                 //printf("ram/timer enable not supported yet!\n");
             }
             break;
+        case MBC5_RAM_BAT:
         case MBC5:
+            if(addr >= 0x4000) {
+                gb_memory_change_ram_bank(state->mem, value);
+            } else if(addr >= 0x2000) {
+                int bank = value;
+                
+                LOG_DEBUG("change rom bank to %i\n", bank);
+                gb_memory_change_rom_bank(state->mem, bank);
+            } else {
+                //printf("ram/timer enable not supported yet!\n");
+            }
             break;
         default:
             printf("Unknown MBC, cannot switch bank\n");
@@ -95,6 +107,9 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
         LOG_DEBUG("DMA Transfer started.\n");
         mem[addr] = value;
         memcpy(&mem[0xfe00], &mem[value << 8], 0xa0);
+    } else if(addr >= 0xff10 && addr <= 0xff3f) {
+        sound_reg_write(addr, value, 0);
+        mem[addr] = value;
     } else if(addr >= 0xff80) { // write to internal ram
         // TODO: hack!!
         gb_vm *vm = (gb_vm*)state;

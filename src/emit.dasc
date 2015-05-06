@@ -407,7 +407,9 @@ bool inst_ld(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 bool inst_inc(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | print "INC"
     | inst1 inc, inst->op1
+    | pushfq
     | mov byte state->f_subtract, 0
+    | popfq
     *cycles += inst->cycles;
     return true;
 }
@@ -415,7 +417,9 @@ bool inst_inc(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 bool inst_dec(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | print "DEC"
     | inst1 dec, inst->op1
+    | pushfq
     | mov byte state->f_subtract, 1
+    | popfq
     *cycles += inst->cycles;
     return true;
 }
@@ -501,7 +505,7 @@ bool inst_inc16(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
         | inc SP
         break;
     default:
-        printf("Invalid operand to DEC16\n");
+        printf("Invalid operand to INC16\n");
         return false;
     }
     *cycles += inst->cycles;

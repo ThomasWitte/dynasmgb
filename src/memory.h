@@ -20,10 +20,12 @@ typedef struct {
           MBC1 = 0x01,
           MBC1_RAM_BAT = 0x03,
           MBC2 = 0x05,
+          MBC2_BAT = 0x06,
           MBC3_TIMER_RAM_BAT = 0x10,
           MBC3 = 0x11,
           MBC3_RAM_BAT = 0x13,
-          MBC5 = 0x19
+          MBC5 = 0x19,
+          MBC5_RAM_BAT = 0x1b
          } mbc;
     uint8_t mbc_mode;
     uint8_t mbc_data;

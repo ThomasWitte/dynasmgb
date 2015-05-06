@@ -262,12 +262,14 @@ void printhex(uint64_t addr) {
     |      opcode L
     ||     break;
     || case MEM_HL:
+    |      pushfq
     |      and xL, 0xff
     |      and xH, 0xff
     |      mov tmp2, xH
     |      shl tmp2, 8
     |      mov tmp1, xL
     |      add tmp1, tmp2
+    |      popfq
     |      opcode byte [aMem + tmp1]
     ||     break;
     || default:
@@ -307,6 +309,9 @@ void printhex(uint64_t addr) {
     |      mov tmp1, xL
     |      add tmp1, tmp2
     |      opcode byte [aMem + tmp1], arg2
+//    |      mov tmp3b, [aMem + tmp1]
+//    |      opcode tmp3b, arg2
+//    |      write_byte [aMem + tmp1], tmp3
     ||     break;
     || default:
     ||     printf("Invalid operand to opcode\n");

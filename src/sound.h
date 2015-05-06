@@ -22,6 +22,8 @@ typedef struct {
     int offset_256hz;
 } gb_sound;
 
+void sound_reg_write(uint16_t addr, uint8_t val, uint64_t time);
+
 bool init_sound(gb_sound *sound, gb_memory *memory);
 
 void pause_sound(gb_sound *sound, bool pause);

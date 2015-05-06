@@ -567,7 +567,8 @@ void yyerror (char const *s)
 
 // compiles block starting at start_address to gb_block
 bool compile(gb_block *block, gb_memory *mem, uint16_t start_address, int opt_level) {
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "compile new block @%#x\n", start_address);
+    //SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "compile new block @%#x\n", start_address);
+    printf("compile new block @%#x\n", start_address);
 
     GList* instructions = NULL;
 
