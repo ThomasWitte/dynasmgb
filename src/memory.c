@@ -47,7 +47,7 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
             } else if(addr >= 0x2000) {
                 int bank = (value & 0x1f) | (state->mem->mbc_mode ? 0 : (state->mem->mbc_data & 0x60));
                 
-                if((bank&0xf) == 0)
+                if((bank&0x1f) == 0)
                     bank |= 1;
                 
                 LOG_DEBUG("change rom bank to %i\n", bank);
