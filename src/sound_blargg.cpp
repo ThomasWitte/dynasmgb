@@ -7,33 +7,34 @@ extern "C" {
 #include "Gb_Apu.h"
 #include "Multi_Buffer.h"
 
-struct gb_sound_blargg {
+struct sound_detail {
     Gb_Apu apu;
     Blip_Buffer buffer;
     std::mutex mut;
-} snd;
+};
 
-void sound_reg_write(uint16_t addr, uint8_t val, uint64_t time) {
-    std::lock_guard<std::mutex> lock(snd.mut);
+void sound_reg_write(gb_sound *sound, uint16_t addr, uint8_t val, uint64_t time) {
+    std::lock_guard<std::mutex> lock(sound->snd->mut);
     if(addr >= 0xff10 && addr <= 0xff3f)
-        snd.apu.write_register(time, addr, val);
+        sound->snd->apu.write_register(time, addr, val);
 }
 
 void audio_callback(void *userdata, uint8_t *stream, int length) {
-    std::lock_guard<std::mutex> lock(snd.mut);
     gb_sound *sound = (gb_sound*) userdata;
+    std::lock_guard<std::mutex> lock(sound->snd->mut);
     uint8_t *memory = sound->memory->mem;
     
     int time = 4194304 * length/sizeof(int16_t) / SAMPLE_FREQUENCY;
     
     for(uint16_t reg = 0xff10; reg <= 0xff3f; ++reg) {
-        memory[reg] = snd.apu.read_register(0, reg);
+        memory[reg] = sound->snd->apu.read_register(0, reg);
     }
     
-    snd.apu.end_frame(time);
-    snd.buffer.end_frame(time);
+    sound->snd->apu.end_frame(time);
+    sound->snd->buffer.end_frame(time);
     
-    snd.buffer.read_samples((int16_t*)stream, length/sizeof(int16_t));
+    sound->snd->buffer.read_samples((int16_t*)stream, length/sizeof(int16_t));
+    sound->snd->buffer.remove_samples(sound->snd->buffer.samples_avail());
 }
 
 bool init_sound(gb_sound *sound, gb_memory *memory) {
@@ -49,13 +50,15 @@ bool init_sound(gb_sound *sound, gb_memory *memory) {
     want.callback = audio_callback;
     want.userdata = (void*) sound;
     
-    snd.apu.treble_eq( -20.0 );
-	snd.buffer.bass_freq( 461 );
-    snd.apu.volume(0.5);
+    sound->snd = new sound_detail();
+    
+//    sound->snd->apu.treble_eq( -20.0 );
+//    sound->snd->buffer.bass_freq( 461 );
+    sound->snd->apu.volume(0.5);
 
-    snd.apu.output(&snd.buffer);
-    snd.buffer.clock_rate( 4194304 );
-    snd.buffer.set_sample_rate(SAMPLE_FREQUENCY, 200);
+    sound->snd->apu.output(&sound->snd->buffer);
+    sound->snd->buffer.clock_rate( 4194304 );
+    sound->snd->buffer.set_sample_rate(SAMPLE_FREQUENCY, 200);
     
     sound->memory = memory;
     
@@ -71,6 +74,8 @@ void pause_sound(gb_sound *sound, bool pause) {
 }
 
 bool deinit_sound(gb_sound *sound) {
+    delete sound->snd;
+
     SDL_PauseAudio(1);
     SDL_CloseAudio();
     return true;

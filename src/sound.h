@@ -15,14 +15,10 @@
 
 typedef struct {
     gb_memory *memory;
-    int offset[4];
-    int amplitude[4];
-    unsigned env_count[4];
-    int noise_val;
-    int offset_256hz;
+    struct sound_detail *snd;
 } gb_sound;
 
-void sound_reg_write(uint16_t addr, uint8_t val, uint64_t time);
+void sound_reg_write(gb_sound *sound, uint16_t addr, uint8_t val, uint64_t time);
 
 bool init_sound(gb_sound *sound, gb_memory *memory);
 

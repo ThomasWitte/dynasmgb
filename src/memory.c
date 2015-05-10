@@ -108,7 +108,9 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
         mem[addr] = value;
         memcpy(&mem[0xfe00], &mem[value << 8], 0xa0);
     } else if(addr >= 0xff10 && addr <= 0xff3f) {
-        sound_reg_write(addr, value, 0);
+        // TODO: hack!!
+        gb_vm *vm = (gb_vm*)state;
+        sound_reg_write(&vm->sound, addr, value, 0);
         mem[addr] = value;
     } else if(addr >= 0xff80) { // write to internal ram
         // TODO: hack!!

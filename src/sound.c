@@ -1,8 +1,19 @@
 #include "sound.h"
 
+typedef struct {
+    int offset[4];
+    int amplitude[4];
+    unsigned env_count[4];
+    int noise_val;
+    int offset_256hz;
+} sound_detail;
+
+void sound_reg_write(gb_sound *sound, uint16_t addr, uint8_t val, uint64_t time) {
+}
+
 void audio_callback(void *userdata, int8_t *stream, int length) {
-    gb_sound *sound = (gb_sound*) userdata;
-    uint8_t *memory = sound->memory->mem;
+    sound_detail *sound = ((gb_sound*) userdata)->snd;
+    uint8_t *memory = ((gb_sound*) userdata)->memory->mem;
     
     int count[4] = {0,0,0,0};
     int freq[4] = {440,440,440,440};
@@ -195,14 +206,16 @@ bool init_sound(gb_sound *sound, gb_memory *memory) {
     want.callback = (void*) audio_callback;
     want.userdata = (void*) sound;
     
+    sound->snd = malloc(sizeof(sound_detail));
+    
     for(int i = 0; i < 4; ++i) {
-        sound->offset[i] = 0;
-        sound->amplitude[i] = 0;
-        sound->env_count[i] = 0;
+        sound->snd->offset[i] = 0;
+        sound->snd->amplitude[i] = 0;
+        sound->snd->env_count[i] = 0;
     }
     sound->memory = memory;
-    sound->noise_val = 0;
-    sound->offset_256hz = 0;
+    sound->snd->noise_val = 0;
+    sound->snd->offset_256hz = 0;
     
     if(SDL_OpenAudio(&want, &have) != 0)
         return false;
@@ -212,6 +225,8 @@ bool init_sound(gb_sound *sound, gb_memory *memory) {
 }
 
 void pause_sound(gb_sound *sound, bool pause) {
+    free(sound->snd);
+
     SDL_PauseAudio(pause ? 1 : 0);
 }
 
