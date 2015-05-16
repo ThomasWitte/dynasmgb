@@ -5,7 +5,7 @@ void free_block(gb_block *block) {
     munmap(block->mem, block->size);
 }
 
-bool init_vm(gb_vm *vm, const char *filename, int opt_level) {
+bool init_vm(gb_vm *vm, const char *filename, int opt_level, bool init_io) {
     if(!gb_memory_init(&vm->memory, filename))
         return false;
     
@@ -77,21 +77,23 @@ bool init_vm(gb_vm *vm, const char *filename, int opt_level) {
 	    vm->highmem_blocks[i].func = 0;
 	}
 
-    // init lcd
-    if(!init_window(&vm->lcd))
-        return false;
+    if(init_io) {
+        // init lcd
+        if(!init_window(&vm->lcd))
+            return false;
 
-    vm->draw_frame = true;
-    vm->next_frame_time = SDL_GetTicks();
-    vm->time_busy = 0;
-    vm->last_time = 0;
-    vm->frame_cnt = 0;
+        vm->draw_frame = true;
+        vm->next_frame_time = SDL_GetTicks();
+        vm->time_busy = 0;
+        vm->last_time = 0;
+        vm->frame_cnt = 0;
 
-    vm->opt_level = opt_level;
+        vm->opt_level = opt_level;
 
-    // init sound
-    if(!init_sound(&vm->sound, &vm->memory))
-        return false;
+        // init sound
+        if(!init_sound(&vm->sound, &vm->memory))
+            return false;
+    }
 
 	return true;
 }
@@ -266,7 +268,8 @@ void show_statistics(gb_vm *vm) {
 	
 	printf("\ttotal compiled rom functions: %lu\n", compiled_functions);
 	printf("\thottest: block @%#lx, %lu times executed\n", most_executed_addr, most_executed);
-	printf("\texecuted blocks total / per frame: %lu/%lu\n", total_executed, total_executed / vm->compiled_blocks[0][0x40].exec_count);
+	int cnt = vm->compiled_blocks[0][0x40].exec_count ? vm->compiled_blocks[0][0x40].exec_count : 1;
+	printf("\texecuted blocks total / per frame: %lu/%lu\n", total_executed, total_executed / cnt);
 	printf("\tframes: %u\n", vm->compiled_blocks[0][0x40].exec_count);
 }
 

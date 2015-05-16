@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
 
     // init memory
     gb_vm *vm = malloc(sizeof(gb_vm));
-    init_vm(vm, argv[optind], opt_level);
+    init_vm(vm, argv[optind], opt_level, true);
 
 #ifdef DEBUG
     SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,

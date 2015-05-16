@@ -135,25 +135,33 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
 
 // initialize memory layout and map file filename
 bool gb_memory_init(gb_memory *mem, const char *filename) {
-    //TODO: memory aliasing
-    //TODO: memory banking
-
-    mem->fd = open(filename, O_RDONLY);
-    if(mem->fd < 0) {
-        printf("Could not open file! (%i)\n", errno);
-        return false;
-    }
     
-    mem->mem = mmap((void*)0x1000000, 0x8000, PROT_READ, MAP_PRIVATE, mem->fd, 0);
-    if(mem->mem == MAP_FAILED) {
-        printf("Map failed! (%i)\n", errno);
-        return false;
-    }
-    
-    if(mmap(mem->mem + 0x8000, 0x8000, PROT_READ | PROT_WRITE,
-            MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0) == MAP_FAILED) {
-        printf("Allocating memory failed! (%i)\n", errno);
-        return false;
+    if(!filename) {
+        mem->fd = -1;
+        mem->mem = mmap((void*)0x1000000, 0x10000, PROT_READ | PROT_WRITE,
+                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+        if(mem->mem == MAP_FAILED) {
+            printf("Map failed! (%i)\n", errno);
+            return false;
+        }
+    } else {
+        mem->fd = open(filename, O_RDONLY);
+        if(mem->fd < 0) {
+            printf("Could not open file! (%i)\n", errno);
+            return false;
+        }
+        
+        mem->mem = mmap((void*)0x1000000, 0x8000, PROT_READ, MAP_PRIVATE, mem->fd, 0);
+        if(mem->mem == MAP_FAILED) {
+            printf("Map failed! (%i)\n", errno);
+            return false;
+        }
+        
+        if(mmap(mem->mem + 0x8000, 0x8000, PROT_READ | PROT_WRITE,
+                MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0) == MAP_FAILED) {
+            printf("Allocating memory failed! (%i)\n", errno);
+            return false;
+        }
     }
 
     mem->ram_banks = malloc(MAX_RAM_BANKS * 0x2000);
