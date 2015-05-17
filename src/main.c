@@ -3,10 +3,11 @@
 #include <execinfo.h>
 #include <unistd.h>
 #include "core.h"
+#include "debugger.h"
 #include "savestate.h"
 
 void usage(const char *exe) {
-    printf("usage: %s [-b BREAKPOINT] [-O LEVEL] file.gb\n", exe);
+    printf("usage: %s [-b BREAKPOINT] [-O LEVEL] [-d] file.gb\n", exe);
 }
 
 //gb_vm vm;
@@ -45,10 +46,12 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    bool debug_mode = false;
     int opt_level = 0;
     int breakpoint = -1;
     int c;
-    while((c = getopt(argc, argv, "b:O:")) != -1) {
+    
+    while((c = getopt(argc, argv, "b:O:d")) != -1) {
         switch(c) {
         case 'b':
             sscanf(optarg, "%x", &breakpoint);
@@ -56,6 +59,10 @@ int main(int argc, char *argv[]) {
 
         case 'O':
             sscanf(optarg, "%i", &opt_level);
+            break;
+
+        case 'd':
+            debug_mode = true;
             break;
 
         case '?':
@@ -76,39 +83,48 @@ int main(int argc, char *argv[]) {
     // init memory
     gb_vm *vm = malloc(sizeof(gb_vm));
     init_vm(vm, argv[optind], opt_level, true);
-
+    
+    gb_debug dbg;
+    gb_debug_init(&dbg, vm);
+    gb_debug_set_enabled(&dbg, debug_mode);
+    
+    if(breakpoint >= 0) {
+        gb_debug_set_breakpoint(&dbg, breakpoint);
+    }
+    
 #ifdef DEBUG
     SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
                        SDL_LOG_PRIORITY_VERBOSE);
 #endif
 
     SDL_Event evt;
-    bool debug_mode = false;
-    memory_inspector_t inspector;
+//    bool open_meminspector = false;
+//    memory_inspector_t inspector;
 
-    if(vm->state.pc == breakpoint) {
-        debug_mode = true;
-        SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
-                           SDL_LOG_PRIORITY_VERBOSE);
+//    if(vm->state.pc == breakpoint || debug_mode) {
+//        debug_mode = true;
+//        SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
+//                           SDL_LOG_PRIORITY_VERBOSE);
 
-        memory_inspector_init(&inspector, &vm->memory);
-        memory_inspector_update(&inspector);
-        printf("debugging enabled\n");
-    }
+//        memory_inspector_init(&inspector, &vm->memory);
+//        memory_inspector_update(&inspector);
+//        printf("debugging enabled\n");
+//    }
 
     // start emulation
-    while(debug_mode || run_vm(vm)) {
-        if(vm->state.pc == breakpoint) {
-            if(!debug_mode) {
-                debug_mode = true;
-                SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
-                                   SDL_LOG_PRIORITY_VERBOSE);
+    while(run_vm_debug(&dbg)) {
 
-                memory_inspector_init(&inspector, &vm->memory);
-                memory_inspector_update(&inspector);
-                printf("debugging enabled\n");
-            }
-        }
+//        if(vm->state.pc == breakpoint) {
+//            if(!debug_mode) {
+//                debug_mode = true;
+//                SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
+//                                   SDL_LOG_PRIORITY_VERBOSE);
+
+//                memory_inspector_init(&inspector, &vm->memory);
+//                memory_inspector_update(&inspector);
+//                printf("debugging enabled\n");
+//            }
+//        }
 
         while(SDL_PollEvent(&evt)) {
             switch(evt.type) {
@@ -177,33 +193,33 @@ int main(int argc, char *argv[]) {
                     vm->memory.mem[0xff0f] |= 0x10;
                     break;
                 case SDLK_d: // enter debugging
-                    if(debug_mode) {
-                        debug_mode = false;
-                        vm->next_frame_time = SDL_GetTicks() + 17;
-                        SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
-                                           SDL_LOG_PRIORITY_ERROR);
+                    if(gb_debug_is_enabled(&dbg)) {
+                        gb_debug_set_enabled(&dbg, false);
+//                        vm->next_frame_time = SDL_GetTicks() + 17;
+//                        SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
+//                                           SDL_LOG_PRIORITY_ERROR);
 
-                        memory_inspector_free(&inspector);
-                        printf("debugging disabled\n");
+//                        memory_inspector_free(&inspector);
+//                        printf("debugging disabled\n");
                     } else {
-                        debug_mode = true;
-                        SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
-                                           SDL_LOG_PRIORITY_VERBOSE);
+                        gb_debug_set_enabled(&dbg, true);
+//                        SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
+//                                           SDL_LOG_PRIORITY_VERBOSE);
 
-                        memory_inspector_init(&inspector, &vm->memory);
-                        memory_inspector_update(&inspector);
-                        printf("debugging enabled\n");
+//                        memory_inspector_init(&inspector, &vm->memory);
+//                        memory_inspector_update(&inspector);
+//                        printf("debugging enabled\n");
                     }
                     break;
-                case SDLK_s: // step block
-                    if(debug_mode) {
+/*                case SDLK_s: // step block
+                    if(open_meminspector) {
                         if(run_vm(vm) == false)
                             goto end_program;
                         memory_inspector_update(&inspector);
                     }
                     break;
                 case SDLK_n: // step frame
-                    if(debug_mode) {
+                    if(open_meminspector) {
                         SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION,
                                            SDL_LOG_PRIORITY_ERROR);
 
@@ -217,7 +233,7 @@ int main(int argc, char *argv[]) {
 
                         memory_inspector_update(&inspector);
                     }
-                    break;
+                    break;*/
                 case SDLK_F2: // save state
                     if(savestate_save(vm, "quicksave.dat")) {
                         printf("quicksave.dat saved.\n");
@@ -244,14 +260,12 @@ int main(int argc, char *argv[]) {
                 break;
             }
         }
-
-        if(debug_mode) {
-            SDL_Delay(0);
-        }
     }
 
 end_program:
     printf("exiting...\n");
+
+    gb_debug_free(&dbg);
 
     // free memory
     free_vm(vm);

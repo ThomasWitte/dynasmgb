@@ -12,7 +12,7 @@
 #include "memory_inspector.h"
 #include "sound.h"
 
-#define MAX_ROM_BANKS 128
+#define MAX_ROM_BANKS 256
 #define MAX_RAM_BANKS 4
 
 typedef struct {
