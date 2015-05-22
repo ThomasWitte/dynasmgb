@@ -34,6 +34,8 @@ bool init_vm(gb_vm *vm, const char *filename, int opt_level, bool init_io) {
     vm->state.ime = true;
     vm->state.halt = false;
     
+    vm->state.trap_reason = 0;
+    
     vm->memory.mem[0xff05] = 0x00;
 	vm->memory.mem[0xff06] = 0x00;
 	vm->memory.mem[0xff07] = 0x00;

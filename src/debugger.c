@@ -6,6 +6,22 @@
 #include <readline/history.h>
 #include "debugger.h"
 
+void gb_stack_push(gb_stack *stack, gb_stack_frame *frame) {
+    if(stack->size == stack->max_size) {
+        stack->max_size += 10;
+        stack->data = realloc(stack->data, stack->max_size * sizeof(gb_stack_frame));
+    }
+    
+    stack->data[stack->size++] = *frame;
+}
+
+void gb_stack_pop(gb_stack *stack) {
+    if(stack->size != 0)
+        stack->size--;
+//    else
+//        printf("Callstack is empty!\n");
+}
+
 bool cmd_help(gb_debug* dbg, bool* quit) {
     // check for arguments
     char* tok = strtok(NULL, " ;");
@@ -18,13 +34,17 @@ bool cmd_help(gb_debug* dbg, bool* quit) {
     } else {
 print_help:
         printf("List of commands: \n\n"
+               "\e[1mbacktrace\e[0m  -- show stack backtrace\n"
                "\e[1mbreak\e[0m      -- set breakpoint\n"
                "\e[1mcontinue\e[0m   -- continue to next breakpoint/watchpoint\n"
+               "\e[1mfind\e[0m       -- find a sequence of bytes in memory\n"
                "\e[1mhelp\e[0m       -- print help for a command\n"
                "\e[1mprint\e[0m      -- print value of memory address\n"
                "\e[1mquit\e[0m       -- exit dynasmgb\n"
                "\e[1mregisters\e[0m  -- print register contents\n"
-               "\e[1mset\e[0m        -- set register or memory contents\n\n"
+               "\e[1mset\e[0m        -- set register or memory contents\n"
+               "\e[1mstep\e[0m       -- execute next block\n"
+               "\e[1mwatch\e[0m      -- set watchpoint\n\n"
                "help [CMD] prints more details\n");
     }
     
@@ -54,6 +74,20 @@ bool cmd_break(gb_debug* dbg, bool* quit) {
 
     gb_debug_set_breakpoint(dbg, addr);
     printf("breakpoint set @%#x.\n", addr);
+    return true;
+}
+
+bool cmd_watch(gb_debug* dbg, bool* quit) {
+    *quit = false;
+    char* arg = strtok(NULL, " ;");
+    
+    if(!arg) return false;
+
+    int addr = -1;
+    sscanf(arg, "%x", &addr);
+
+    gb_debug_set_watchpoint(dbg, addr);
+    printf("watchpoint set @%#x.\n", addr);
     return true;
 }
 
@@ -105,6 +139,76 @@ bool cmd_set(gb_debug* dbg, bool* quit) {
     return true;
 }
 
+bool cmd_find(gb_debug* dbg, bool* quit) {
+    *quit = false;
+    
+    uint8_t pattern[20]; // search for max. 20 bytes
+    int pattern_len = 0;
+    
+    char* arg;
+    while((arg = strtok(NULL, " ;,[]"))) {
+        sscanf(arg, "%hhx", pattern + pattern_len);
+        pattern_len++;
+        if(pattern_len == 20)
+            break;
+    }
+    
+    if(pattern_len == 0) return false;
+
+    for(int addr = 0; addr <= 0xffff - pattern_len; ++addr) {
+        int l = 0;
+        for(; l < pattern_len; ++l) {
+            if(dbg->vm->memory.mem[addr + l] != pattern[l])
+                break;
+        }
+        if(l == pattern_len) {
+            printf("pattern found @0x%.4x: ", addr);
+            if(addr >= 5) {
+                for(int i = addr-5; i < addr; i++) {
+                    printf("%.2x ", dbg->vm->memory.mem[i]);
+                }
+            }
+            
+            for(int i = addr; i < addr+pattern_len; i++) {
+                printf("\e[1m%.2x\e[0m ", dbg->vm->memory.mem[i]);
+            }
+            
+            if(addr+pattern_len+5 <= 0xffff) {
+                for(int i = addr+pattern_len; i < addr+pattern_len+5; i++) {
+                    printf("%.2x ", dbg->vm->memory.mem[i]);
+                }
+            }
+            printf("\n");
+        }
+    }
+
+    return true;
+}
+
+bool cmd_backtrace(gb_debug* dbg, bool* quit) {
+    *quit = false;
+
+    for(unsigned i = 0; i < dbg->stack.size; ++i) {
+        if(dbg->stack.data[dbg->stack.size - 1 - i].trap_reason == REASON_INT) {
+            printf("\e[0;31m");
+        }
+        
+        if(dbg->stack.data[dbg->stack.size - 1 - i].trap_reason == REASON_RST) {
+            printf("\e[0;32m");
+        }
+        
+        printf("%i: 0x%.4x\e[0m\n", i, dbg->stack.data[dbg->stack.size - 1 - i].pc);
+    }
+
+    return true;
+}
+
+bool cmd_step(gb_debug* dbg, bool* quit) {
+    *quit = false;
+
+    return run_vm(dbg->vm);
+}
+
 bool gb_debug_execute_cmd(gb_debug* dbg, char* cmdline, bool *quit) {
     char* tok = strtok(cmdline, " ;");
 
@@ -136,16 +240,42 @@ bool gb_debug_execute_cmd(gb_debug* dbg, char* cmdline, bool *quit) {
         return cmd_set(dbg, quit);
     }
     
+    if(strcmp(tok, "watch") == 0) {
+        return cmd_watch(dbg, quit);
+    }
+    
+    if(strcmp(tok, "find") == 0) {
+        return cmd_find(dbg, quit);
+    }
+    
+    if(strcmp(tok, "backtrace") == 0) {
+        return cmd_backtrace(dbg, quit);
+    }
+    
+    if(strcmp(tok, "step") == 0) {
+        return cmd_step(dbg, quit);
+    }
+    
     return false;
 }
 
 void gb_debug_init(gb_debug* dbg, gb_vm* vm) {
     dbg->vm = vm;
     dbg->enabled = false;
-    dbg->breakpoint = 0;
+    dbg->breakpoint = -1;
+    dbg->watchpoint = -1;
+    dbg->watchpoint_value = 0;
+    
+    dbg->stack.data = malloc(10 * sizeof(gb_stack_frame));
+    dbg->stack.size = 0;
+    dbg->stack.max_size = 10;
+    
+    gb_stack_frame frame = {dbg->vm->state._sp, dbg->vm->state.pc, REASON_CALL};
+    gb_stack_push(&dbg->stack, &frame);
 }
 
 void gb_debug_free(gb_debug* dbg) {
+    free(dbg->stack.data);
 }
 
 void gb_debug_set_enabled(gb_debug* dbg, bool mode) {
@@ -182,6 +312,8 @@ bool gb_debug_prompt(gb_debug *dbg) {
         if(!gb_debug_execute_cmd(dbg, cmd, &quit)) {
             printf("Unsupported command, \e[1mhelp\e[0m helps.\n");
         }
+    } else {
+        cmd_step(dbg, &quit);
     }
     
     free(cmdline);
@@ -192,7 +324,50 @@ void gb_debug_set_breakpoint(gb_debug *dbg, int breakpoint) {
     dbg->breakpoint = breakpoint;
 }
 
+void gb_debug_set_watchpoint(gb_debug *dbg, int watchpoint) {
+    dbg->watchpoint_value = dbg->vm->memory.mem[watchpoint & 0xffff];
+    dbg->watchpoint = watchpoint;
+}
+
 bool run_vm_debug(gb_debug *dbg) {
+    if(dbg->vm->state.trap_reason != 0) {
+        if(dbg->vm->state.trap_reason & REASON_CALL) {
+            gb_stack_frame frame = {dbg->vm->state._sp, dbg->vm->state.pc, REASON_CALL};
+            gb_stack_push(&dbg->stack, &frame);
+        }
+        
+        if(dbg->vm->state.trap_reason & REASON_RST) {
+            gb_stack_frame frame = {dbg->vm->state._sp, dbg->vm->state.pc, REASON_RST};
+            gb_stack_push(&dbg->stack, &frame);
+        }
+        
+        if(dbg->vm->state.trap_reason & REASON_RET) {
+            // most games dont return from rst
+            if(dbg->stack.size)
+                while(dbg->stack.data[dbg->stack.size - 1].trap_reason == REASON_RST)
+                    gb_stack_pop(&dbg->stack);
+
+            gb_stack_pop(&dbg->stack);
+        }
+        
+        if(dbg->vm->state.trap_reason & REASON_INT) {
+            gb_stack_frame frame = {dbg->vm->state._sp, dbg->vm->state.pc, REASON_INT};
+            gb_stack_push(&dbg->stack, &frame);
+        }
+        dbg->vm->state.trap_reason = 0;
+    }
+
+    if(dbg->watchpoint != -1 &&
+       dbg->vm->memory.mem[dbg->watchpoint] != dbg->watchpoint_value)
+    {
+        printf("value of watchpoint changed while executing block @%#x\n",
+               dbg->vm->state.last_pc);
+        printf("[0x%.4x] : 0x%.2x -> 0x%.2x\n", dbg->watchpoint & 0xffff,
+               dbg->watchpoint_value, dbg->vm->memory.mem[dbg->watchpoint]);
+        gb_debug_set_watchpoint(dbg, -1); // remove watchpoint
+        gb_debug_set_enabled(dbg, true);
+    }
+
     if(dbg->vm->state.pc == dbg->breakpoint) {
         printf("reached breakpoint @%#x\n", dbg->breakpoint);
         gb_debug_set_breakpoint(dbg, -1); // remove breakpoint

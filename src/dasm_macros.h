@@ -183,6 +183,19 @@ void printhex(uint64_t addr) {
 	| popfq
 |.endmacro
 
+|.macro bt_call
+    || if(inst->opcode == CALL) {
+    |      mov byte state->trap_reason, REASON_CALL
+    || }
+    || if(inst->opcode == RST) {
+    |      mov byte state->trap_reason, REASON_RST
+    || }
+|.endmacro
+
+|.macro bt_ret
+    | mov byte state->trap_reason, REASON_RET
+|.endmacro
+
 |.macro prologue
     | push rbx
     | push rsp

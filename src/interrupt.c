@@ -135,6 +135,7 @@ uint16_t start_interrupt(gb_state* state) {
             LOG_DEBUG("VBLANK interrupt!\n");
             state->ime = 0;       // disable interrupts
             mem[0xff0f] &= ~0x01; // reset VBLANK interrupt
+            state->trap_reason |= REASON_INT;
             return 0x40;          // return interrupt start address
         }
         
@@ -142,6 +143,7 @@ uint16_t start_interrupt(gb_state* state) {
             LOG_DEBUG("STAT interrupt!\n");
             state->ime = 0;
             mem[0xff0f] &= ~0x02; // reset STAT interrupt
+            state->trap_reason |= REASON_INT;
             return 0x48;          // return interrupt start address
         }
         
@@ -149,6 +151,7 @@ uint16_t start_interrupt(gb_state* state) {
             LOG_DEBUG("TIMER interrupt!\n");
             state->ime = 0;
             mem[0xff0f] &= ~0x04; // reset TIMER interrupt
+            state->trap_reason |= REASON_INT;
             return 0x50;          // return interrupt start address
         }
         
@@ -160,6 +163,7 @@ uint16_t start_interrupt(gb_state* state) {
             LOG_DEBUG("JOYPAD interrupt!\n");
             state->ime = 0;
             mem[0xff0f] &= ~0x10;
+            state->trap_reason |= REASON_INT;
             return 0x60;
         }
     }

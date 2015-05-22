@@ -104,39 +104,50 @@ bool inst_jp(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
 
     switch(inst->op2) {
 	case IMM8:
+	    | bt_call
 		| return inst->address + (int8_t)inst->args[1] + 2
 		break;
-    case IMM16:    
+    case IMM16:
+        | bt_call
         | return inst->args[2]*256 + inst->args[1]
         break;
     case MEM_HL:
         | mov tmp1, xH
         | shl tmp1, 8
         | add tmp1, xL
+        | bt_call
         | return tmp1
         break;
     case MEM_0x00:
+        | bt_call
         | return 0x00
         break;
     case MEM_0x08:
+        | bt_call
         | return 0x08
         break;
     case MEM_0x10:
+        | bt_call
         | return 0x10
         break;
     case MEM_0x18:
+        | bt_call
         | return 0x18
         break;
     case MEM_0x20:
+        | bt_call
         | return 0x20
         break;
     case MEM_0x28:
+        | bt_call
         | return 0x28
         break;
     case MEM_0x30:
+        | bt_call
         | return 0x30
         break;
     case MEM_0x38:
+        | bt_call
         | return 0x38
         break;
 	case TARGET_1:
@@ -210,6 +221,7 @@ bool inst_ret(dasm_State **Dst, gb_instruction *inst, uint64_t* cycles) {
     | inc SP
     | inc SP
     | and tmp1, 0xffff
+    | bt_ret
     | return tmp1
 
     if(inst->op1 != NONE) {

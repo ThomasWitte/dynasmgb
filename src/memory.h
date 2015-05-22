@@ -76,6 +76,13 @@ typedef struct {
     // cpu is in halt state
     uint32_t halt;
     uint8_t halt_arg;
+    
+    // flag to trace callstack
+    enum {REASON_OTHER = 0,
+          REASON_CALL = 1,
+          REASON_RST = 2,
+          REASON_INT = 4,
+          REASON_RET = 8} trap_reason;
 } gb_state;
 
 // emulate write through mbc

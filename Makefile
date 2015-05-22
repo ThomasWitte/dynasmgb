@@ -34,7 +34,7 @@ $(BIN): $(OBJ)
 	$(CXX) -c $(CXXFLAGS) -I src/Gb_Snd_Emu-0.1.4/gb_apu $<
 	
 src/%.c: src/%.dasc
-	lua dynasm/dynasm.lua $(DYNASMFLAGS) -I src -o $@ $<
+	lua5.2 dynasm/dynasm.lua $(DYNASMFLAGS) -I src -o $@ $<
 	
 src/%.tab.c: src/%.y
 	yacc -d -o $@ $<
