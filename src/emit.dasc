@@ -1263,7 +1263,7 @@ bool emit(gb_block *block, GList *inst) {
 
     | add qword state->inst_count, cycles
 //    | pushfq
-    | return 0
+    | return -1
 
     size_t sz;
     if(dasm_link(&d, &sz) != 0) {

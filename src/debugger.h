@@ -23,6 +23,7 @@ typedef struct {
     bool enabled;
     uint8_t watchpoint_value;
     gb_stack stack;
+    memory_inspector_t* meminspector;
 } gb_debug;
 
 void gb_debug_init(gb_debug* dbg, gb_vm* vm);

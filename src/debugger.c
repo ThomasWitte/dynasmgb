@@ -36,9 +36,12 @@ print_help:
         printf("List of commands: \n\n"
                "\e[1mbacktrace\e[0m  -- show stack backtrace\n"
                "\e[1mbreak\e[0m      -- set breakpoint\n"
+               "\e[1mcall\e[0m       -- call function at address\n"
                "\e[1mcontinue\e[0m   -- continue to next breakpoint/watchpoint\n"
+               "\e[1mexec\e[0m       -- exec byte sequence\n"
                "\e[1mfind\e[0m       -- find a sequence of bytes in memory\n"
                "\e[1mhelp\e[0m       -- print help for a command\n"
+               "\e[1mmeminspect\e[0m -- start/stop meminspector\n"
                "\e[1mprint\e[0m      -- print value of memory address\n"
                "\e[1mquit\e[0m       -- exit dynasmgb\n"
                "\e[1mregisters\e[0m  -- print register contents\n"
@@ -54,6 +57,25 @@ print_help:
 
 bool cmd_quit(gb_debug* dbg, bool* quit) {
     *quit = true;
+    return true;
+}
+
+bool cmd_call(gb_debug* dbg, bool* quit) {
+    *quit = false;
+    
+    char* arg = strtok(NULL, " ;");
+    
+    if(!arg) return false;
+
+    int addr = 0;
+    sscanf(arg, "%x", &addr);
+    
+    // save PC to stack
+    dbg->vm->state._sp -= 2;
+    *(uint16_t*)(&dbg->vm->state.mem->mem[dbg->vm->state._sp]) = dbg->vm->state.pc;
+    // jump to address
+    dbg->vm->state.pc = addr;
+    
     return true;
 }
 
@@ -127,15 +149,54 @@ bool cmd_set(gb_debug* dbg, bool* quit) {
     
     if(!arg1 || !arg2) return false;
 
-    uint64_t addr = 0;
-    sscanf(arg1, "%lx", &addr);
-
     uint64_t value = 0;
     sscanf(arg2, "%lx", &value);
 
-    gb_memory_write(&dbg->vm->state, addr, value);
+    if(strcmp(arg1, "A") == 0) {
+        dbg->vm->state.a = value;
+        printf("A = 0x%.2x\n", dbg->vm->state.a);
+    } else if(strcmp(arg1, "F") == 0) {
+        dbg->vm->state.flags &= ~0x51;
+        dbg->vm->state.flags |= (value & 0x10) >> 4 | (value & 0xa0) >> 1;
+        dbg->vm->state.f_subtract = (value & 0x40) >> 6;
+        
+        uint8_t f = (dbg->vm->state.flags & 0x1) << 4 |
+                    (dbg->vm->state.flags & 0x50) << 1 |
+                    (dbg->vm->state.f_subtract & 0x1) << 6;
+        
+        printf("F = 0x%.2x\n", f);
+    } else if(strcmp(arg1, "B") == 0) {
+        dbg->vm->state.b = value;
+        printf("B = 0x%.2x\n", dbg->vm->state.b);
+    } else if(strcmp(arg1, "C") == 0) {
+        dbg->vm->state.c = value;
+        printf("C = 0x%.2x\n", dbg->vm->state.c);
+    } else if(strcmp(arg1, "D") == 0) {
+        dbg->vm->state.d = value;
+        printf("D = 0x%.2x\n", dbg->vm->state.d);
+    } else if(strcmp(arg1, "E") == 0) {
+        dbg->vm->state.e = value;
+        printf("E = 0x%.2x\n", dbg->vm->state.e);
+    } else if(strcmp(arg1, "H") == 0) {
+        dbg->vm->state.h = value;
+        printf("H = 0x%.2x\n", dbg->vm->state.h);
+    } else if(strcmp(arg1, "L") == 0) {
+        dbg->vm->state.l = value;
+        printf("L = 0x%.2x\n", dbg->vm->state.l);
+    } else if(strcmp(arg1, "SP") == 0) {
+        dbg->vm->state._sp = value;
+        printf("SP = 0x%.2x\n", dbg->vm->state._sp);
+    } else if(strcmp(arg1, "PC") == 0) {
+        dbg->vm->state.pc = value;
+        printf("PC = 0x%.2x\n", dbg->vm->state.pc);
+    } else {
+        uint64_t addr = 0;
+        sscanf(arg1, "%lx", &addr);
 
-    printf("[0x%.4lx] = 0x%.2x\n", addr, dbg->vm->memory.mem[addr]);
+        gb_memory_write(&dbg->vm->state, addr, value);
+
+        printf("[0x%.4lx] = 0x%.2x\n", addr, dbg->vm->memory.mem[addr]);
+    }
     return true;
 }
 
@@ -209,6 +270,59 @@ bool cmd_step(gb_debug* dbg, bool* quit) {
     return run_vm(dbg->vm);
 }
 
+bool cmd_exec(gb_debug* dbg, bool* quit) {
+    *quit = false;
+    
+    uint8_t bytes[103];
+    for(int i = 0; i < 100; ++i)
+        bytes[i] = 0; //NOP
+    
+    bytes[100] = 0xc3; //jp
+    bytes[101] = dbg->vm->state.pc & 0x00ff;
+    bytes[102] = (dbg->vm->state.pc & 0xff00) >> 8;
+    
+    int len = 0;
+    char* arg;
+    while((arg = strtok(NULL, " ;,[]"))) {
+        sscanf(arg, "%hhx", bytes + len);
+        len++;
+        if(len == 100) {
+            printf("maximum size of block reached.");
+            break;
+        }
+    }
+    
+    gb_block temp = {0};
+    gb_memory temp_mem;
+    temp_mem.mem = bytes;
+
+    if(!compile(&temp, &temp_mem, 0, 0)) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "an error occurred while compiling the function @%#x.\n", dbg->vm->state.pc);
+        return false;
+    }
+    int next_pc = temp.func(&dbg->vm->state);
+    if(next_pc != -1)
+        dbg->vm->state.pc = next_pc;
+
+    free_block(&temp);
+    return true;
+}
+
+bool cmd_meminspect(gb_debug *dbg, bool* quit) {
+    *quit = false;
+    
+    if(!dbg->meminspector) {
+        dbg->meminspector = malloc(sizeof(memory_inspector_t));
+        memory_inspector_init(dbg->meminspector, &dbg->vm->memory);
+        memory_inspector_update(dbg->meminspector);
+    } else {
+        memory_inspector_free(dbg->meminspector);
+        free(dbg->meminspector);
+    }
+    
+    return true;
+}
+
 bool gb_debug_execute_cmd(gb_debug* dbg, char* cmdline, bool *quit) {
     char* tok = strtok(cmdline, " ;");
 
@@ -256,6 +370,18 @@ bool gb_debug_execute_cmd(gb_debug* dbg, char* cmdline, bool *quit) {
         return cmd_step(dbg, quit);
     }
     
+    if(strcmp(tok, "meminspect") == 0) {
+        return cmd_meminspect(dbg, quit);
+    }
+    
+    if(strcmp(tok, "call") == 0) {
+        return cmd_call(dbg, quit);
+    }
+    
+    if(strcmp(tok, "exec") == 0) {
+        return cmd_exec(dbg, quit);
+    }
+    
     return false;
 }
 
@@ -272,10 +398,17 @@ void gb_debug_init(gb_debug* dbg, gb_vm* vm) {
     
     gb_stack_frame frame = {dbg->vm->state._sp, dbg->vm->state.pc, REASON_CALL};
     gb_stack_push(&dbg->stack, &frame);
+    
+    dbg->meminspector = 0;
 }
 
 void gb_debug_free(gb_debug* dbg) {
     free(dbg->stack.data);
+    
+    if(dbg->meminspector) {
+        memory_inspector_free(dbg->meminspector);
+        free(dbg->meminspector);
+    }
 }
 
 void gb_debug_set_enabled(gb_debug* dbg, bool mode) {
@@ -344,7 +477,7 @@ bool run_vm_debug(gb_debug *dbg) {
         if(dbg->vm->state.trap_reason & REASON_RET) {
             // most games dont return from rst
             if(dbg->stack.size)
-                while(dbg->stack.data[dbg->stack.size - 1].trap_reason == REASON_RST)
+                while(dbg->stack.size && dbg->stack.data[dbg->stack.size - 1].trap_reason == REASON_RST)
                     gb_stack_pop(&dbg->stack);
 
             gb_stack_pop(&dbg->stack);
@@ -375,6 +508,10 @@ bool run_vm_debug(gb_debug *dbg) {
     }
 
     if(dbg->enabled) {
+        if(dbg->meminspector) {
+            memory_inspector_update(dbg->meminspector);
+        }
+        
         SDL_Delay(0);
         return gb_debug_prompt(dbg);
     }
