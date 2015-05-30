@@ -23,18 +23,79 @@ void memory_inspector_init(memory_inspector_t *inspector, gb_memory *mem) {
         SDL_WINDOWPOS_UNDEFINED,
         640, 640, SDL_WINDOW_OPENGL);
 
+    inspector->win2 = SDL_CreateWindow(
+        "address space",
+        SDL_WINDOWPOS_UNDEFINED,
+        SDL_WINDOWPOS_UNDEFINED,
+        512, 512, SDL_WINDOW_OPENGL);
+
     if(!inspector->win) {
+        printf("Could not create window!\n");
+        exit(-1);
+    }
+    
+    if(!inspector->win2) {
         printf("Could not create window!\n");
         exit(-1);
     }
 
     inspector->imgbuf = malloc(640 * 640 * sizeof(uint32_t));
+    memset(inspector->imgbuf, 0, 640 * 640 * sizeof(uint32_t));
+
+    inspector->imgbuf2 = malloc(512 * 512 * sizeof(uint32_t));
+    memset(inspector->imgbuf2, 0, 512 * 512 * sizeof(uint32_t));
+    
     inspector->mem = mem;
 
     SDL_Renderer *renderer = SDL_CreateRenderer(inspector->win, -1, SDL_RENDERER_ACCELERATED);
+    SDL_Renderer *renderer2 = SDL_CreateRenderer(inspector->win2, -1, SDL_RENDERER_ACCELERATED);
 
-    inspector->bitmapTex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+    inspector->bitmapTex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888,
                                              SDL_TEXTUREACCESS_STATIC, 640, 640);
+    inspector->bitmapTex2 = SDL_CreateTexture(renderer2, SDL_PIXELFORMAT_RGB888,
+                                             SDL_TEXTUREACCESS_STATIC, 512, 512);
+}
+
+void update_aspace_view(memory_inspector_t *inspector) {
+    uint8_t *mem = inspector->mem->mem;
+    for(int x = 0; x < 128; ++x)
+        for(int y = 0; y < 256; ++y) {
+            uint16_t addr = 0x8000 + (255-y)*128 + x;
+            uint8_t val = mem[addr];
+            if((inspector->imgbuf2[y*2*512 + 2*x] & 0xff000000) >> 24 != val) {
+                inspector->imgbuf2[y*2*512 + 2*x] = val << 24 | 0xffffff;
+                inspector->imgbuf2[y*2*512 + 2*x+1] = val << 24 | 0xffffff;
+                inspector->imgbuf2[(y*2+1)*512 + 2*x] = val << 24 | 0xffffff;
+                inspector->imgbuf2[(y*2+1)*512 + 2*x+1] = val << 24 | 0xffffff;
+            } else {
+                int pattern = 0;
+            
+                if(addr < 0xa000) { // tile ram  -> orange
+                    if((inspector->imgbuf2[y*2*512 + 2*x] & 0xff) > 0x0)
+                        pattern = 0x030405;
+                } else if(addr < 0xc000) { // cart ram   -> green
+                    if((inspector->imgbuf2[y*2*512 + 2*x] & 0xff0000) > 0x0)
+                        pattern = 0x050404;
+                } else if(addr < 0xe000) { // ram banks  -> blue
+                    if((inspector->imgbuf2[y*2*512 + 2*x] & 0xff00) > 0x0)
+                        pattern = 0x050503;
+                } else if(addr < 0xfe00) { // echo ram   -> red
+                    if((inspector->imgbuf2[y*2*512 + 2*x] & 0xff) > 0x0)
+                        pattern = 0x020505;
+                } else if(addr < 0xff00) { // oam        -> orange
+                    if((inspector->imgbuf2[y*2*512 + 2*x] & 0xff) > 0x0)
+                        pattern = 0x030405;
+                } else {                   // hardware io, high mem -> pink
+                    if((inspector->imgbuf2[y*2*512 + 2*x] & 0xff00) > 0x0)
+                        pattern = 0x030503;
+                }
+
+                inspector->imgbuf2[y*2*512 + 2*x] -= pattern;
+                inspector->imgbuf2[y*2*512 + 2*x+1] -= pattern;
+                inspector->imgbuf2[(y*2+1)*512 + 2*x] -= pattern;
+                inspector->imgbuf2[(y*2+1)*512 + 2*x+1] -= pattern;
+            }
+        }
 }
 
 void memory_inspector_update(memory_inspector_t *inspector) {
@@ -54,19 +115,32 @@ void memory_inspector_update(memory_inspector_t *inspector) {
         }
     }
 
-    SDL_Renderer *renderer = SDL_GetRenderer(inspector->win);
+    update_aspace_view(inspector);
 
+    SDL_Renderer *renderer = SDL_GetRenderer(inspector->win);
     SDL_RenderClear(renderer);
     SDL_UpdateTexture(inspector->bitmapTex, NULL, inspector->imgbuf, 640*sizeof(uint32_t));
     SDL_RenderCopy(renderer, inspector->bitmapTex, NULL, NULL);
     SDL_RenderPresent(renderer);    
+
+    SDL_Renderer *renderer2 = SDL_GetRenderer(inspector->win2);
+    SDL_RenderClear(renderer2);
+    SDL_UpdateTexture(inspector->bitmapTex2, NULL, inspector->imgbuf2, 512*sizeof(uint32_t));
+    SDL_RenderCopy(renderer2, inspector->bitmapTex2, NULL, NULL);
+    SDL_RenderPresent(renderer2);
 }
 
 void memory_inspector_free(memory_inspector_t *inspector) {
     free(inspector->imgbuf);
+    free(inspector->imgbuf2);
 
     SDL_Renderer *renderer = SDL_GetRenderer(inspector->win);
     SDL_DestroyTexture(inspector->bitmapTex);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(inspector->win);
+    
+    SDL_Renderer *renderer2 = SDL_GetRenderer(inspector->win2);
+    SDL_DestroyTexture(inspector->bitmapTex2);
+    SDL_DestroyRenderer(renderer2);
+    SDL_DestroyWindow(inspector->win2);
 }

@@ -408,6 +408,7 @@ void gb_debug_free(gb_debug* dbg) {
     if(dbg->meminspector) {
         memory_inspector_free(dbg->meminspector);
         free(dbg->meminspector);
+        dbg->meminspector = 0;
     }
 }
 
@@ -514,6 +515,13 @@ bool run_vm_debug(gb_debug *dbg) {
         
         SDL_Delay(0);
         return gb_debug_prompt(dbg);
+    }
+
+    static int64_t last_frame_cnt = 0;
+    if(dbg->meminspector && dbg->vm->frame_cnt != last_frame_cnt) {
+        // update meminspector every time a frame is drawn
+        last_frame_cnt = dbg->vm->frame_cnt;
+        memory_inspector_update(dbg->meminspector);
     }
 
     return run_vm(dbg->vm);
