@@ -1,7 +1,7 @@
 CC = gcc
 CXX = g++
 CFLAGS = -std=gnu11 -Wall -Wextra -Wno-unused-parameter `pkg-config --cflags glib-2.0`
-CXXFLAGS = -std=c++14 -Wall -Wextra -Wno-unused-parameter `pkg-config --cflags glib-2.0`
+CXXFLAGS = -std=c++14 -Wall -Wextra -Wno-unused-parameter -Wno-unused-value `pkg-config --cflags glib-2.0`
 LDFLAGS = -std=gnu11
 LIBS = -lSDL2 -lreadline `pkg-config --libs glib-2.0` -lm -lstdc++
 BIN = dynasmgb
