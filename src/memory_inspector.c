@@ -58,8 +58,8 @@ void memory_inspector_init(memory_inspector_t *inspector, gb_memory *mem) {
 
 void update_aspace_view(memory_inspector_t *inspector) {
     uint8_t *mem = inspector->mem->mem;
-    for(int x = 0; x < 128; ++x)
-        for(int y = 0; y < 256; ++y) {
+    for(int y = 0; y < 256; ++y)
+        for(int x = 0; x < 128; ++x) {
             uint16_t addr = 0x8000 + (255-y)*128 + x;
             uint8_t val = mem[addr];
             if((inspector->imgbuf2[y*2*512 + 2*x] & 0xff000000) >> 24 != val) {
@@ -96,6 +96,72 @@ void update_aspace_view(memory_inspector_t *inspector) {
                 inspector->imgbuf2[(y*2+1)*512 + 2*x+1] -= pattern;
             }
         }
+    
+    // show rom banks:
+    int num_banks = 2 << mem[0x148];
+    for(int y = 0; y <= num_banks / 16; ++y) {
+        for(int x = 0; x < 16; ++x) {
+            if(16*y + x >= num_banks)
+                break;
+            
+            int col = 0x777777;
+            if(16*y + x == inspector->mem->current_rom_bank || (y == 0 && x == 0)) {
+                col = 0xffffff;
+            } else {
+                col = (inspector->imgbuf2[(256+16*y+1)*512 + 256+16*x+1] & 0xffff00) - 0x010100;
+                if(col < 0x202000) col = 0x202000;
+            }
+            
+            for(int u = 0; u < 14; ++u)
+                for(int v = 0; v < 14; ++v)
+                    inspector->imgbuf2[(256+16*y+u+1)*512 + 256+16*x+v+1] = col;
+        }
+    }
+    
+    // show ram banks
+    num_banks = mem[0x149] > 0 ? 1 << (mem[0x149]-1) : 0;
+    for(int y = 0; y <= num_banks / 16; ++y) {
+        for(int x = 0; x < 16; ++x) {
+            if(16*y + x >= num_banks)
+                break;
+            
+            int col = 0x777777;
+            if(16*y + x == inspector->mem->current_ram_bank) {
+                col = 0xffffff;
+            } else {
+                col = (inspector->imgbuf2[(220+16*y+1)*512 + 256+16*x+1] & 0xffff) - 0x0101;
+                if(col < 0x2020) col = 0x2020;
+            }
+            
+            for(int u = 0; u < 14; ++u)
+                for(int v = 0; v < 14; ++v)
+                    inspector->imgbuf2[(220+16*y+u+1)*512 + 256+16*x+v+1] = col;
+        }
+    }
+    
+    // show io registers
+    for(int y = 0; y < 3; ++y) {
+        for(int x = 0; x < 16; ++x) {
+            if(16*y + x >= 75)
+                break;
+            
+            int col = 0x777777;
+            if(mem[0xff00 + 16*y+x] != (inspector->imgbuf2[(16*y+1)*512 + 256+16*x+1] & 0xff000000) >> 24) {
+                col = 0xffffff | (mem[0xff00 + 16*y+x] << 24);
+            } else {
+                col = (inspector->imgbuf2[(16*y+1)*512 + 256+16*x+1] & 0xffff00ff) - 0x010001;
+                if((col&0xffffff) < 0x300030) {
+                    col &= ~0xffffff;
+                    col |= 0x300030;
+                }
+            }
+            
+            for(int u = 0; u < 14; ++u)
+                for(int v = 0; v < 14; ++v)
+                    inspector->imgbuf2[(16*y+u+1)*512 + 256+16*x+v+1] = col;
+        }
+    }
+    
 }
 
 void memory_inspector_update(memory_inspector_t *inspector) {

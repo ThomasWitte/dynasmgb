@@ -9,8 +9,8 @@ OBJ = core.o instructions.o lcd.o memory.o emit.o interrupt.o main.o \
       memory_inspector.o savestate.o sound_blargg.o optimize.tab.o optimize.o \
       Blip_Buffer.o Gb_Apu.o Gb_Oscs.o Multi_Buffer.o debugger.o
 
-all: CFLAGS += -O3 -flto
-all: LDFLAGS += -O3 -flto
+all: CFLAGS += -O3 -flto -ggdb
+all: LDFLAGS += -O3 -flto -ggdb
 all: $(BIN)
 
 debug: CFLAGS += -g -D DEBUG -D DEBUG_CG

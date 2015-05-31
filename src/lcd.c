@@ -93,7 +93,7 @@ render_back(uint32_t *buf, uint8_t* addr_sp)
                     int col = ((addr_sp[0x8000 + 16*tile_idx + 2*px_y] >> (7-x)) & 1) +
                               (((addr_sp[0x8001 + 16*tile_idx + 2*px_y] >> (7-x)) & 1) << 1);
                               
-                    if(col != 0 && px_x >= 0 && px_x < 168) {
+                    if(col != 0 && px_x >= 0 && px_x < 160) {
                         if(!(flags & 0x80) || buf[y*160 + px_x] == pal_grey[0]) {
                             buf[y*160 + px_x] = pal_grey[obp>>(col<<1)&3];
                         }
@@ -113,7 +113,7 @@ render_back(uint32_t *buf, uint8_t* addr_sp)
                     int col = ((addr_sp[0x8000 + 16*tile_idx + 2*px_y] >> (7-x)) & 1) +
                               (((addr_sp[0x8001 + 16*tile_idx + 2*px_y] >> (7-x)) & 1) << 1);
                               
-                    if(col != 0 && px_x >= 0 && px_x < 168) {
+                    if(col != 0 && px_x >= 0 && px_x < 160) {
                         if(!(flags & 0x80) || buf[y*160 + px_x] == pal_grey[0]) {
                             buf[y*160 + px_x] = pal_grey[obp>>(col<<1)&3];
                         }
@@ -196,6 +196,12 @@ void render_frame(gb_lcd* lcd) {
     }
     //SDL_RenderClear(renderer);
     SDL_UpdateTexture(bitmapTex, NULL, imgbuf[(cur_imgbuf+1)%2], 160*sizeof(uint32_t));
+    //void *pixels = NULL;
+    //int pitch = 0;
+    //SDL_LockTexture(bitmapTex, NULL, &pixels, &pitch);
+    //memcpy(pixels, imgbuf[(cur_imgbuf+1)%2], 160*144*sizeof(uint32_t));
+    //SDL_UnlockTexture(bitmapTex);
+    
     SDL_RenderCopy(renderer, bitmapTex, NULL, NULL);
     SDL_RenderPresent(renderer);
 }

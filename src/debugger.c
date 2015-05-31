@@ -42,8 +42,10 @@ print_help:
                "\e[1mfind\e[0m       -- find a sequence of bytes in memory\n"
                "\e[1mhelp\e[0m       -- print help for a command\n"
                "\e[1mmeminspect\e[0m -- start/stop meminspector\n"
+               "\e[1mpatch\e[0m      -- replace function at address\n"
                "\e[1mprint\e[0m      -- print value of memory address\n"
                "\e[1mquit\e[0m       -- exit dynasmgb\n"
+               "\e[1mrecompile\e[0m  -- recompiles block e.g. to remove patches\n"
                "\e[1mregisters\e[0m  -- print register contents\n"
                "\e[1mset\e[0m        -- set register or memory contents\n"
                "\e[1mstep\e[0m       -- execute next block\n"
@@ -308,6 +310,62 @@ bool cmd_exec(gb_debug* dbg, bool* quit) {
     return true;
 }
 
+bool cmd_patch(gb_debug* dbg, bool* quit) {
+    *quit = false;
+    
+    char* arg = strtok(NULL, " ;");
+    if(!arg) return false;
+
+    int addr = -1;
+    sscanf(arg, "%x", &addr);
+    
+    uint8_t bytes[103];
+    for(int i = 0; i < 100; ++i)
+        bytes[i] = 0; //NOP
+    
+    bytes[100] = 0xc3; //jp
+    bytes[101] = dbg->vm->state.pc & 0x00ff;
+    bytes[102] = (dbg->vm->state.pc & 0xff00) >> 8;
+    
+    int len = 0;
+    while((arg = strtok(NULL, " ;,[]"))) {
+        sscanf(arg, "%hhx", bytes + len);
+        len++;
+        if(len == 100) {
+            printf("maximum size of block reached.");
+            break;
+        }
+    }
+    
+    gb_memory temp_mem;
+    temp_mem.mem = bytes;
+
+    if(!compile(&dbg->vm->compiled_blocks[addr/0x4000][addr%0x4000], &temp_mem, 0, 0)) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "an error occurred while compiling the function @%#x.\n", dbg->vm->state.pc);
+        return false;
+    }
+    dbg->vm->compiled_blocks[addr/0x4000][addr%0x4000].exec_count = 1;
+    printf("patched block at %#x (bank: %i, offset: %x)\n", addr, addr/0x4000, addr%0x4000);
+
+    return true;
+}
+
+bool cmd_recompile(gb_debug* dbg, bool* quit) {
+    *quit = false;
+    
+    char* arg = strtok(NULL, " ;");
+    if(!arg) return false;
+
+    int addr = -1;
+    sscanf(arg, "%x", &addr);
+    
+    dbg->vm->compiled_blocks[addr/0x4000][addr%0x4000].exec_count = 0;
+    
+    printf("block at %#x (bank: %i, offset: %x) will be recompiled\n", addr, addr/0x4000, addr%0x4000);
+
+    return true;
+}
+
 bool cmd_meminspect(gb_debug *dbg, bool* quit) {
     *quit = false;
     
@@ -382,6 +440,14 @@ bool gb_debug_execute_cmd(gb_debug* dbg, char* cmdline, bool *quit) {
         return cmd_exec(dbg, quit);
     }
     
+    if(strcmp(tok, "patch") == 0) {
+        return cmd_patch(dbg, quit);
+    }
+    
+    if(strcmp(tok, "recompile") == 0) {
+        return cmd_recompile(dbg, quit);
+    }
+       
     return false;
 }
 
