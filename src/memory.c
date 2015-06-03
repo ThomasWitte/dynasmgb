@@ -133,6 +133,53 @@ void gb_memory_write(gb_state *state, uint64_t addr, uint64_t value) {
     }
 }
 
+bool gb_memory_save_ramfile(gb_memory *mem) {
+    // make sure all data is copied to mem->ram_banks
+    mem->rtc_access = false;
+    int bank = mem->current_ram_bank;
+    gb_memory_change_ram_bank(mem, bank+1 % MAX_RAM_BANKS);
+    gb_memory_change_ram_bank(mem, bank);
+
+    char filename[200];
+    snprintf(filename, 200, "%s.sav", mem->filename);
+
+    int fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+    
+    if(fd < 0) {
+        printf("Could not open file! (%i)\n", errno);
+        return false;
+    }
+        
+    int bytes_to_write = 0x2000 * MAX_RAM_BANKS;
+    while(bytes_to_write > 0) {
+        bytes_to_write -= write(fd, mem->ram_banks, bytes_to_write);
+    }
+    
+    close(fd);
+    return true;
+}
+
+void gb_memory_open_ramfile(gb_memory *mem) {
+    char filename[200];
+    snprintf(filename, 200, "%s.sav", mem->filename);
+
+    int fd = open(filename, O_RDONLY);
+    
+    if(fd < 0) {
+        printf("Could not open file! (%i)\n", errno);
+        return;
+    }
+        
+    int bytes_to_read = 0x2000 * MAX_RAM_BANKS;
+    while(bytes_to_read > 0) {
+        bytes_to_read -= read(fd, mem->ram_banks, bytes_to_read);
+    }
+    
+    close(fd);
+
+    gb_memory_reload_ram_bank(mem);
+}
+
 // initialize memory layout and map file filename
 bool gb_memory_init(gb_memory *mem, const char *filename) {
     
@@ -174,6 +221,18 @@ bool gb_memory_init(gb_memory *mem, const char *filename) {
     mem->current_ram_bank = 0;
     mem->rtc_access = false;
     
+    switch(mem->mbc) {
+    case MBC1_RAM_BAT:
+    case MBC2_BAT:
+    case MBC3_TIMER_RAM_BAT:
+    case MBC3_RAM_BAT:
+    case MBC5_RAM_BAT:
+        gb_memory_open_ramfile(mem);
+        break;
+    default:
+        ; // do nothing
+    }
+    
     return true;
 }
 
@@ -206,11 +265,16 @@ void gb_memory_change_ram_bank(gb_memory *mem, int bank) {
     if(!mem->rtc_access) {
         memcpy(mem->ram_banks + mem->current_ram_bank * 0x2000, mem->mem + 0xa000, 0x2000);
     }
-    memcpy(mem->mem + 0xa000, mem->ram_banks + mem->current_ram_bank * 0x2000, 0x2000);
+    memcpy(mem->mem + 0xa000, mem->ram_banks + bank * 0x2000, 0x2000);
     mem->rtc_access = false;
     
     mem->current_ram_bank = bank;
     
+    return;
+}
+
+void gb_memory_reload_ram_bank(gb_memory *mem) {
+    memcpy(mem->mem + 0xa000, mem->ram_banks + mem->current_ram_bank * 0x2000, 0x2000);
     return;
 }
 
@@ -226,6 +290,19 @@ void gb_memory_update_rtc_time(gb_memory *mem, int value) {
 
 // free memory again
 bool gb_memory_free(gb_memory *mem) {
+    switch(mem->mbc) {
+    case MBC1_RAM_BAT:
+    case MBC2_BAT:
+    case MBC3_TIMER_RAM_BAT:
+    case MBC3_RAM_BAT:
+    case MBC5_RAM_BAT:
+        if(!gb_memory_save_ramfile(mem))
+            printf("saving ramfile failed!\n");
+        break;
+    default:
+        ; // do nothing
+    }
+
     free(mem->ram_banks);
     
     close(mem->fd);

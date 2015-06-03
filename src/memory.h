@@ -97,6 +97,9 @@ void gb_memory_change_rom_bank(gb_memory *mem, int bank);
 // change ram bank to bank if supported
 void gb_memory_change_ram_bank(gb_memory *mem, int bank);
 
+// reload current ram bank if supported
+void gb_memory_reload_ram_bank(gb_memory *mem);
+
 // prepare rtc read
 void gb_memory_access_rtc(gb_memory *mem, int bank);
 
