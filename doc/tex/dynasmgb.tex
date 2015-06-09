@@ -1,0 +1,131 @@
+\documentclass[a4paper]{scrartcl}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+
+\title{Entwicklung eines Gameboy-Emulators}
+\author{Thomas Witte}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Motivation / Emulation}
+
+Der 1989 von Nintendo hergestellte Gameboy ist mit über 100 Millionen verkauften Einheiten eine der erfolgreichsten Spielekonsolen überhaupt.
+%Warum ist Emulation notwendig
+%Was muss emuliert werden
+%Interpretation vs jit vs aot
+%existierende Gameboy Emulatoren
+\section{Gameboy Architektur}
+
+Die folgenden Abschnitte fassen Aufbau und Funktionsweise des klassischen Gameboys zusammen. Auf die Unterschiede zum Gameboy Color und Super Gameboy wird nicht eingegangen.
+
+\subsection{Hardware}
+
+Herzstück des Gameboy ist ein leicht modifizierter Z80 Prozessor, der mit 4,2MHz getaktet ist. Der Registersatz besteht -- ähnlich auch einem Intel 8080 -- aus 7 8bit Registern, einem Flagregister (Zero, Carry, Halfcarry, Subtract) sowie zweier 16bit Register (SP und PC). Die 8bit Register können durch bestimmte 16bit Instruktionen jeweils paarweise als 16bit Register genutzt werden.
+
+Der Gameboy kann auf insgesamt 16kB internen Arbeitsspeicher zugreifen. Dabei sind 8kB dieses Speichers als Tile-RAM für Grafiken zweckgebunden. Der Memory Bank Controller (MBC) bestimmter Spiele kann bis zu 128kB zusätzlichen RAM innerhalb der Cartridge adressieren (16 Bänke à 8kB).
+
+Das Spiel wird direkt aus dem ROM der Spiel-Cartridges gestartet. Über MBCs können dabei maximal 4MB (256 Bänke à 16kB) adressiert werden.
+
+Als Display kommt ein Graustufen-LCD zum Einsatz. Es kann 4 Grautöne darstellen und besitzt eine Auflösung von $160 \times 144$ Pixel bei 60Hz. Die Pixel des Displays können dabei nicht einzeln angesprochen werden, sondern nur in $8 \times 8$ Pixel großen Kacheln (Tiles).
+
+Dabei kann gleichzeitig eine Hintergrundkarte, eine Vordergrundkarte und bis zu 40 Sprites angezeigt werden.
+
+Die Soundausgabe erfolgt über einen integrierten Lautsprecher oder den Kopfhörerausgang in Stereo. Der Gameboy bietet dazu vier Soundkanäle, die Rechteckschwingungen, Rauschen oder Wave-Samples erzeugen bzw. abspielen können.
+
+Zur Eingabe stehen insgesamt acht Knöpfe zur Verfügung (vier Richtungstasten, A, B, Select und Start). Alternativ können Daten über eine serielle Schnittstelle gesendet oder empfangen werden.
+%Prozessor, Speicher, Takt, Display, Registersatz, IO ...
+\subsection{Befehlssatz}
+
+Der Befehlssatz umfasst insgesamt 500 verschiedene Befehle variabler Instruktionslänge (1-3 Bytes). 244 Befehle nutzen das erste Byte für den Opcode und maximal zwei Bytes für Argumente. Die restlichen 256 Befehle werden durch das Präfixbyte 0xCB eingeleitet und besitzen somit einen 2Byte-Opcode und keine weiteren Argumente.
+
+Die Ausführungszeit der Befehle beträgt jeweils zwischen 4 und 24 Taktzyklen. Damit beträgt der maximale Befehlsdurchsatz 1MOps/s.
+
+Eine Übersicht sämtlicher Befehle befindet sich im Anhang.
+
+%Bild im Anhang, wichtige Instruktionen
+\subsection{Interrupts}
+
+Der Gameboy stellt insgesamt fünf verschiedene Interrupts zur Verfügung:
+
+\begin{description}
+\item[VBLANK]
+Der VBLANK-Interrupt wird nach jedem dargestellten Bild dargestellt und markiert den Beginn der VBLANK-Phase in der für 4560 Taktzyklen frei auf den Videospeicher zugegriffen werden kann.
+\item[STAT]
+Das STAT-Register (Speicheradresse 0xFF41) wechselt mit jeder dargestellten Bildzeile zwischen drei Zuständen und während der VBLANK-Phase auf einen vierten. Der STAT-Interrupt kann bei einem Wechsel dieser Zustände ausgelöst werden. Welche Zustandsübergänge betroffen sind, kann ausgewählt werden.
+\item[Timer]
+Der Timer-Interrupt wird bei einem Überlauf des Timer-Registers (0xFF05) ausgelöst. Die Rate mit der das Timer-Register inkrementiert wird ist dabei auswählbar, sodass der Timer-Interrupt mit einer wählbaren Rate von 16Hz, 64Hz, 256Hz oder 1kHz auftritt.
+\item[Serial]
+Der Serial Transfer-Interrupt wird beim Abschluss eines seriellen Transfers ausgelöst.
+\item[Joypad]
+Bei jedem Tastendruck eines der acht Knöpfe wird der Joypad-Interrupt ausgelöst.
+\end{description}
+
+Tritt ein Interrupt auf, so wird er anhängig und ein Bit im Interrupt Flag-Register (0xFF0F) gesetzt.
+Über das Interrupt Enable Register (0xFFFF) kann ausgewählt werden, welche Interrupts aktiv sind.
+Das Interrupt Master Enable-Flag kann zusätzlich alle Interrupts abschalten. Es kann durch die Instruktionen DI (Disable Interrupts), EI (Enable Interrupts) oder RETI (Return from Interrupt) manipuliert werden.
+
+Ist ein Interrupt anhängig, das entsprechende Bit im Interrupt Enable Register gesetzt und das Interrupt Master Enable-Flag gesetzt wird eine Handlerfunktion mit fester Startadresse zwischen 0x40 (VBLANK) und 0x60 (Joypad) aufgerufen und mittels des Interrupt Master Enable weitere Interrupts während der Behandlung unterbunden.
+%Interrupts, Startadressen, ...
+\subsection{Adressraum}
+
+\subsubsection{Memory Map}
+
+Der adressierbare Adressraum des Gameboys beträgt 64kB. In die unteren 32kB (0x0 - 0x7FFF) werden zwei Rombänke à 16kB gleichzeitig eingeblendet. Der Wechsel zwischen den Rombänken geschieht durch den MBC innerhalb der Cartridge. Alle verfügbaren MBCs lösen einen Wechsel der oberen Rombank durch Schreibzugriffe auf bestimmte Adressen im ROM aus.
+
+Die Adressen zwischen 0x8000 und 0x9FFF bilden den Video-RAM. Er enthält $8 \times 8$ Pixel große Kacheln zu je 16 Byte.
+
+Zwischen 0xA000 und 0xBFFF wird der Cartridge RAM eingeblendet. Je nach MBC lassen sich eventuell mehrere Bänke tauschen. Dieser Speicher ist in einigen Spielcartridges durch eine Batterie versorgt und kann damit auch bei ausgeschaltetem Gameboy einen Spielstand halten.
+
+Es folgen 8kB interner RAM (0xC000 - 0xDFFF), der fast vollständig ein zweites Mal im Adressbereich 0xE000 - 0xFDFF gespiegelt wird. Diese Adressen werden jedoch typischerweise nicht verwendet.
+
+Die Adressen 0xFE00 bis 0xFE9F enthalten den OAM Speicher. Er enthält die Position, anzuzeigende Grafik, verwendete Graustufenpalette und Flags aller 40 Sprites. Per DMA-Transfer kann der OAM Speicher nebenläufig überschrieben werden.
+
+Über den Adressbereich 0xFF00 bis 0xFF7F wird der Hardware IO gesteuert. Er enthält Register zur Kontrolle von Timern, Seriellen Übertragungen, DMA-Transfers, Soundausgabe und des anzuzeigenden Mapbereichs.
+
+Im Anschluss befinden sich weitere 127 Byte Arbeitsspeicher (0xFF80 - 0xFFFE), die jederzeit les- und schreibbar sind. Da während eines DMA-Transfers der gesamte sonstige Speicher weder gelesen noch geschrieben werden kann, muss während eines solchen Transfers in diesen Speicherbereich gesprungen werden.
+
+Das Interrupt Enable Register belegt die höchste Adresse 0xFFFF.
+
+\subsubsection{Startadressen}
+
+Die Ausführung des Programms beginnt an Adresse 0x100. Die Handlerfunktionen mit den Startadressen zwischen 0x00 und 0x60 werden durch Restarts und Interrupts angesprungen. 
+
+\subsubsection{ROM-Header}
+
+Die Rom-Adressen 0x104 bis 0x14F sind durch den ROM-Header belegt. Er enthält eine Grafik, die das Nintendo-Logo zeigt (0x104 bis 0x133). Diese wird auf realen Konsolen beim Start angezeigt und verglichen. Stimmt sie nicht exakt überein, startet der Gameboy das Spiel nicht. Die weiteren Bytes enthalten Spieltitel, Hersteller, Flags die anzeigen, ob das Spiel spezielle Funktionen für Gameboy Color oder Super Gameboy enthält, sowie Informationen über den verbauten MBC und die Anzahl der auf der Cartridge vorhandenen RAM- und ROM-Bänke.
+%Layout, MBCs, Startsequenz, Memory-Banking, ROM-Header, Spiele speichern
+\subsection{Grafik}
+
+Die Pixel des Gameboydisplays können nicht einzeln angesprochen werden, sondern es werden immer ganze Kacheln von jeweils $8 \times 8$ Pixel Größe angezeigt. Neben einer Vordergrund- und Hintergrundkarte (WIN und BG genannt) die die Indizes der anzuzeigenden Kacheln enthalten, können bis zu 40 Sprites frei auf dem Display positioniert werden.
+
+Das Bild wird zeilenweise von oben nach unten aufgebaut. Über das Register LY (0xFF44) kann die derzeit bearbeitete Zeile ausgelesen werden und über das STAT Register (0xFF41) ob derzeit ein Zugriff auf den Grafikspeicher möglich ist.
+
+Die Größe der Vordergrund- und Hintergrundkarte beträgt 32 auf 32 Kacheln, sodass immer nur ein Ausschnitt auf dem Display sichtbar ist. Über die Register SCX (Scroll X, 0xFF43), SCY (Scroll Y, 0xFF42), WX (Window X, 0xFF4B) und WY (Window Y, 0xFF4A) kann der anzuzeigende Bereich gewählt werden. Durch Änderung des sichtbaren Bereichs während des Bildaufbaus können Welleneffekte auf dem Display erzeugt werden.
+
+Abbildung~??? zeigt exemplarisch, wie die Farbe eines Hintergrundpixels zustande kommt; der Aufbau für ein Vordergrundpixel erfolgt analog.
+
+Bei der Anzeige von Sprites kommt statt einer Tilemap, der OAM-Speicher zum Einsatz: Er enthält für jeden der 40 Sprites eine 4 Byte Struktur, die neben der Bildschrimposition den Kachelindex und einige Flags enthält. Über diese Flags kann der Sprite gespiegelt, hinter dem Hintergrund oder mit einer anderen Graustufenpalette angezeigt werden.
+%Timing, Effekte, Speicher, DMA, Tilekodierung, Graustufenpaletten
+\subsection{Audio}
+%Timing, Effekte, Register
+\section{Aufbau des jit-Übersetzers}
+%Schematischer Aufbau
+%Designziel direkte Reads
+%Registermapping
+%Optimierung
+%Beipielhafte Übersetzung einer Funktion
+%Interrupts, Timer, etc.
+%Memory Banking
+\section{Grafik- / Audioausgabe}
+%Grafikthread, Zeilenweiser Aufbau
+%Audiobuffer, Auswertung mit jedem Frame
+\section{Debugger}
+%unterstützte Befehle, visualisierung des Adressraums, patch, print, set, ...
+\section{Kompatibilität}
+%Screenshots, bekannte Probleme
+\section{Ausblick / offene Punkte}
+\end{document}
