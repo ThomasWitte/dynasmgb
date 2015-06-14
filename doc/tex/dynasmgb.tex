@@ -3,6 +3,7 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage[ngerman]{babel}
+\usepackage{graphicx}
 
 \title{Entwicklung eines Gameboy-Emulators}
 \author{Thomas Witte}
@@ -14,6 +15,8 @@
 \section{Motivation / Emulation}
 
 Der 1989 von Nintendo hergestellte Gameboy ist mit über 100 Millionen verkauften Einheiten eine der erfolgreichsten Spielekonsolen überhaupt.
+
+…
 %Warum ist Emulation notwendig
 %Was muss emuliert werden
 %Interpretation vs jit vs aot
@@ -76,7 +79,14 @@ Ist ein Interrupt anhängig, das entsprechende Bit im Interrupt Enable Register 
 
 Der adressierbare Adressraum des Gameboys beträgt 64kB. In die unteren 32kB (0x0 - 0x7FFF) werden zwei Rombänke à 16kB gleichzeitig eingeblendet. Der Wechsel zwischen den Rombänken geschieht durch den MBC innerhalb der Cartridge. Alle verfügbaren MBCs lösen einen Wechsel der oberen Rombank durch Schreibzugriffe auf bestimmte Adressen im ROM aus.
 
-Die Adressen zwischen 0x8000 und 0x9FFF bilden den Video-RAM. Er enthält $8 \times 8$ Pixel große Kacheln zu je 16 Byte.
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.75\linewidth]{img/mmap.pdf}
+\caption{Visualisierung der oberen 32kB des Adressraums (Pokémon Blaue Edition)}
+\label{img:sound}
+\end{figure}
+
+Die Adressen zwischen 0x8000 und 0x9FFF bilden den Video-RAM. Er enthält $8 \times 8$ Pixel große Kacheln zu je 16 Byte, sowie Vordergrund und Hintergrund Tile Maps.
 
 Zwischen 0xA000 und 0xBFFF wird der Cartridge RAM eingeblendet. Je nach MBC lassen sich eventuell mehrere Bänke tauschen. Dieser Speicher ist in einigen Spielcartridges durch eine Batterie versorgt und kann damit auch bei ausgeschaltetem Gameboy einen Spielstand halten.
 
@@ -106,13 +116,83 @@ Das Bild wird zeilenweise von oben nach unten aufgebaut. Über das Register LY (
 
 Die Größe der Vordergrund- und Hintergrundkarte beträgt 32 auf 32 Kacheln, sodass immer nur ein Ausschnitt auf dem Display sichtbar ist. Über die Register SCX (Scroll X, 0xFF43), SCY (Scroll Y, 0xFF42), WX (Window X, 0xFF4B) und WY (Window Y, 0xFF4A) kann der anzuzeigende Bereich gewählt werden. Durch Änderung des sichtbaren Bereichs während des Bildaufbaus können Welleneffekte auf dem Display erzeugt werden.
 
-Abbildung~??? zeigt exemplarisch, wie die Farbe eines Hintergrundpixels zustande kommt; der Aufbau für ein Vordergrundpixel erfolgt analog.
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{img/bg_tiles}
+\caption{Bestimmung des Helligkeitswerts eines Hintergrundpixels}
+\label{img:bg_tiles}
+\end{figure}
+
+Abbildung~\ref{img:bg_tiles} zeigt exemplarisch, wie die Farbe eines Hintergrundpixels zustande kommt: zunächst werden für die aktuell gezeichnete Bildzeile die Kachelindizes aus der Background Tile Map bestimmt; diese liegt wählbar entweder ab 0x9800 oder 0x9C00. Über diesen Index wird die Tile Data Table ab 0x8000 oder 0x8800 indiziert. Der Helligkeitswert des $x$-ten Pixels der $y$-ten Kachelzeile kann dann aus dem $x$-ten Bit des $2 \cdot y$-ten und $2 \cdot y+1$-ten Bytes aufgebaut werden. Der Aufbau für ein Vordergrundpixel erfolgt analog.
 
 Bei der Anzeige von Sprites kommt statt einer Tilemap, der OAM-Speicher zum Einsatz: Er enthält für jeden der 40 Sprites eine 4 Byte Struktur, die neben der Bildschrimposition den Kachelindex und einige Flags enthält. Über diese Flags kann der Sprite gespiegelt, hinter dem Hintergrund oder mit einer anderen Graustufenpalette angezeigt werden.
 %Timing, Effekte, Speicher, DMA, Tilekodierung, Graustufenpaletten
 \subsection{Audio}
+
+Der Gameboy verfügt über vier Kanäle zur Klangerzeugung, die beliebig in die Stereo-Ausgabekanäle gemischt werden können.
+
+Kanal 1 und 2 erzeugen Rechteckschwingungen mit wählbarer Frequenz, Duty-Cycle und linearer Hüllkurve (Abbildung~\ref{img:sound}). Kanal 1 kann zusätlich noch eine Frequenzänderung („Sweep“) eines Tons erzeugen.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\linewidth]{img/sound}
+\caption{Parameter für die Tonerzeugung auf Kanal 2}
+\label{img:sound}
+\end{figure}
+
+Kanal 3 kann kann Wave-Samples abspielen. Der Wave-RAM aus dem diese gelesen werden ist auf 32 Samples à 4 Bit beschränkt.
+
+Kanal 4 erzeugt weißes Rauschen. Dabei kann die Rauschcharakteristik beeinflusst werden um „weicheres“ oder „härteres“ Rauschen zu erzeugen.
 %Timing, Effekte, Register
 \section{Aufbau des jit-Übersetzers}
+
+Für die Emulation der Gameboy Hardware auf herkömmlichen PCs (x86-64 Architektur) wurde ein just-in-time-kompilierender Emulationskern implementiert. Anstatt einzelne Instruktionen in einer Schleife zu dekodieren und interpretieren, wie bei einem interpretierenden Emulator, wird versucht ganze Blöcke, die gewöhnlich mit einer Sprunginstruktion (JP, JR, CALL, RST, RET, RETI) enden, zusammenzufassen. Mittels des Laufzeitassemblers „dynasm“ des Luajit Projekts wird zum ersten Zeitpunkt, zu dem eine Speicheradresse angesprungen wird, dem Block entsprechende x86-Instruktionen erzeugt und ausgeführt.
+
+Ein Ziel bei der Entwicklung war, möglichst die Statusflags (Carry, Halfcarry/Adjust und Zero) der Hostarchitektur für die emulierte Umgebung zu nutzen, anstatt diese zu emulieren. Dies ist in den meisten Fällen problemlos möglich, da sich die Z80-artige Gameboy CPU und die Intel 8080-Architektur, die größtenteils auch von modernen Prozessoren unterstützt wird sehr ähnlich sind. Da das Subtract-Flag des Gameboy keine direkte Entsprechung in der x86-64 Architektur besitzt muss es als einziges der Statusflags emuliert werden.
+
+Sprünge werden nicht direkt ausgeführt, sondern stattdessen das Sprungziel gespeichert und die erzeugte Funktion mit RET verlassen. Dadurch kann die Laufzeitumgebung gegebenenfalls zunächst den Block am Sprungziel übersetzen und andere parallele Aufgaben ausführen. Diese umfassen die Interrupt, Grafik, Eingabe und DMA Emulation\footnote{Die Soundemulation läuft komplett asynchron in einem eigenen Thread und benötigt daher keine Unterbrechung des Programmablaufs.}.
+
+Während der Ausführung übersetzter Programmblöcke wird der Registersatz des Gameboy direkt auf Register der x86-64 Architektur abgebildet. Am Ende eines Blocks muss dann der gesamte Gameboy-Registersatz, Prozessorflags und die Anzahl emulierter Taktzyklen gesichert werden (struct gb\_state). Tabelle~\ref{tab:register} stellt die Registernutzung während der Ausführung übersetzter Blöcke dar. Die für die 16 Bit Instruktionen des Gameboy nötigen kombinierten Register AF, BC, DE und HL werden bei Bedarf zunächst in einem temporären Register zusammengesetzt und nach der Instruktion wieder zurückgeschrieben.
+
+\begin{figure}[htbp]
+\centering
+\begin{tabular}{c|c|c}
+Gameboy&Host (x86-64)&Bemerkung \\
+\hline
+A&r0 (RAX)&Akkumulator \\
+F&-&dynamisch aus FLAGS-Register erzeugt \\
+B&r1 (RCX)& \\
+C&r2 (RDX)&\\
+D&r3 (RBX)& \\
+E&r13& \\
+H&r5 (RBP)&\\
+L&r6 (RSI)& \\
+SP&r7 (RDI)& \\
+PC&-&nicht nötig \\
+-&r8&Basisadresse des Gameboy-Adressraums \\
+-&r9&Adresse des gb\_state struct \\
+-&r10&1. temporäres Register \\
+-&r11&2. temporäres Register \\
+-&r12&3. temporäres Register \\
+-&r4 (RSP)&Host Stack Pointer
+\end{tabular}
+\caption{Registermapping zwischen Gameboy und Host}
+\label{tab:register}
+\end{figure}
+
+Ein zweites wichtiges Ziel bei der Implementierung war die Unterstützung direkter lesender Speicherzugriffe: um eine Adresse des Gameboy-Adressraums zu lesen, soll nur eine zusätzliche Addition eines Basiszeigers notwendig sein. Für schreibende Speicherzugriffe ist dies nicht möglich, da Schreibzugriffe auf Adressen im ROM zu Bankwechseln durch den MBC führen und manche IO-Register bei schreibenden Zugriffen bestimmte Aktionen wie DMA-Transfers oder das Lesen der Joypad-Buttons auslösen. Schreibende Zugriffe werden daher durch einen Funktionsaufruf ersetzt, der gegebenenfalls nötige Seiteneffekte emuliert.
+
+Direkte lesende Zugriffe haben einige wichtige Implikationen:
+\begin{itemize}
+\item Kaum Leseoverhead: Im Vergleich zum Gameboy entsteht bei der Emulation kaum Overhead beim Lesen. Da lesende Speicherzugriffe oft zu den häufigsten Instruktionen gehören, bedeutet dies eine deutliche Effizienzsteigerung.
+\item Der emulierte Gameboy-Adressraum muss konsekutiv sein: der Wechsel von ROM- oder RAM-Bänken erfordert einen großen zusätzlichen Aufwand, da zunächst durch munmap und mmap die entsprechende Bank in den Adressraum eingeblendet werden muss.
+\item Statusregister müssen immer aktualisiert werden: der Programmablauf muss häufig unterbrochen werden, um spezielle Statusregister, wie den Timer TIMA (0xFF05), oder die aktuell gezeichnete Bildzeile LY (0xFF44) zu aktualisieren. Geschieht dies nicht, terminieren Warteschleifen eventuell nicht mehr.
+\end{itemize}
+
+\subsection{Beispielhafte Übersetzung eines Blocks}
+
+\subsection{Optimierung}
+
 %Schematischer Aufbau
 %Designziel direkte Reads
 %Registermapping
