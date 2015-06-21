@@ -4,6 +4,49 @@
 \usepackage[utf8]{inputenc}
 \usepackage[ngerman]{babel}
 \usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{courier}
+\usepackage{listings}
+
+\lstdefinelanguage
+   [x64]{Assembler}     % add a "x64" dialect of Assembler
+   [x86masm]{Assembler} % based on the "x86masm" dialect
+   % with these extra keywords:
+   {morekeywords={CDQE,CQO,CMPSQ,CMPXCHG16B,JRCXZ,LODSQ,MOVSXD, %
+                  POPFQ,PUSHFQ,SCASQ,STOSQ,IRETQ,RDTSCP,SWAPGS, %
+                  LD, LDH, JR, CP, CALL,
+                  rax,rdx,rcx,rbx,rsi,rdi,rsp,rbp, %
+                  r8,r8d,r8w,r8b,r9,r9d,r9w,r9b}} % etc.
+
+\lstset{ %
+  language=[x64]Assembler,       % the language of the code
+  basicstyle=\ttfamily,       % the size of the fonts that are used for the code
+  %numbers=left,                   % where to put the line-numbers
+  %numberstyle=\tiny\color{gray},  % the style that is used for the line-numbers
+  %stepnumber=1,                   % the step between two line-numbers. If it's 1, each line 
+                                  % will be numbered
+  %numbersep=5pt,                  % how far the line-numbers are from the code
+  backgroundcolor=\color{white},  % choose the background color. You must add \usepackage{color}
+  showspaces=false,               % show spaces adding particular underscores
+  showstringspaces=false,         % underline spaces within strings
+  showtabs=false,                 % show tabs within strings adding particular underscores
+  frame=single,                   % adds a frame around the code
+  %rulecolor=\color{black},        % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. commens (green here))
+  tabsize=4,                      % sets default tabsize to 2 spaces
+  captionpos=b,                   % sets the caption-position to bottom
+  breaklines=true,                % sets automatic line breaking
+  breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
+  title=\lstname,                 % show the filename of files included with \lstinputlisting;
+                                  % also try caption instead of title
+%  keywordstyle=\color{blue},          % keyword style
+  commentstyle=\color{green},       % comment style
+  stringstyle=\color{mauve},         % string literal style
+  escapeinside={\%*}{*)},            % if you want to add a comment within your code
+  morekeywords={*,...},               % if you want to add more keywords to the set
+%  
+  belowskip=0em,
+  aboveskip=2em
+}
 
 \title{Entwicklung eines Gameboy-Emulators}
 \author{Thomas Witte}
@@ -152,6 +195,8 @@ Ein Ziel bei der Entwicklung war, möglichst die Statusflags (Carry, Halfcarry/A
 
 Sprünge werden nicht direkt ausgeführt, sondern stattdessen das Sprungziel gespeichert und die erzeugte Funktion mit RET verlassen. Dadurch kann die Laufzeitumgebung gegebenenfalls zunächst den Block am Sprungziel übersetzen und andere parallele Aufgaben ausführen. Diese umfassen die Interrupt, Grafik, Eingabe und DMA Emulation\footnote{Die Soundemulation läuft komplett asynchron in einem eigenen Thread und benötigt daher keine Unterbrechung des Programmablaufs.}.
 
+Während der Übersetzung eines Programmblocks wird für jedes mögliche Ende über das der Block verlassen werden kann\footnote{Durch bedingte Sprünge können dies beliebig viele sein.}, die Anzahl der bis zu diesem Punkt benötigten Gameboy-Taktzyklen berechnet und diese Summe bei der Ausführung auf einen Instruktionszähler addiert. Mittels dieses Zählers können auf dem Gameboy zu bestimmten Zeitpunkten auftretende Ereignisse wie Timer- oder VBLANK-Interrupts trotz der höheren Geschwindigkeit der Hostplattform zeitlich genau ausgeführt werden. Da eventuell Routinen in den emulierten Programmen existieren, die auf eine feste Anzahl ausgeführter Instruktionen in einem bestimmten Zeitraum angewiesen sind, können nicht ohne Kompatibilitätsprobleme Timer des Hostsystems benutzt werden. Aufgrund der blockweisen Ausführung besteht jedoch auch bei dem hier vorgestellten Emulator das Problem, dass Interrupts oder Timer erst um einige Takte verspätet -- nach dem nächsten Sprung -- ausgeführt beziehungsweise aktualisiert werden.
+
 Während der Ausführung übersetzter Programmblöcke wird der Registersatz des Gameboy direkt auf Register der x86-64 Architektur abgebildet. Am Ende eines Blocks muss dann der gesamte Gameboy-Registersatz, Prozessorflags und die Anzahl emulierter Taktzyklen gesichert werden (struct gb\_state). Tabelle~\ref{tab:register} stellt die Registernutzung während der Ausführung übersetzter Blöcke dar. Die für die 16 Bit Instruktionen des Gameboy nötigen kombinierten Register AF, BC, DE und HL werden bei Bedarf zunächst in einem temporären Register zusammengesetzt und nach der Instruktion wieder zurückgeschrieben.
 
 \begin{figure}[htbp]
@@ -191,7 +236,94 @@ Direkte lesende Zugriffe haben einige wichtige Implikationen:
 
 \subsection{Beispielhafte Übersetzung eines Blocks}
 
+Die einzelnen Schritte zur Übersetzung und Ausführung eines Programmblocks sollen durch ein Beispiel verdeutlicht werden: Das folgende Listing zeigt einen Block aus dem Spiel „Super Mario World“.
+
+\begin{lstlisting}
+3E 02		LD A, 2
+EA 00 20	LD (0x2000), A
+E0 FD		LDH (0xFD), A
+FA 1D DA	LD A, (0xDA1D)
+FE 03		CP A, 3
+20 0B		JR NZ, 0xOB
+3E FF		LD A, 0xFF
+EA 1D DA	LD (0xDA1D), A
+CD E8 09	CALL 0x9E8
+\end{lstlisting}
+
+Im ersten Schritt werden Instruktionen bis zum Ende des Blocks gelesen. Jeder unbedingte Sprung (JP, CALL, RST, RET, RETI), sowie EI (Enable Interrupts) beenden einen Block. Die Instruktionen werden in einer verketteten Liste gespeichert und nach ihrem Typ gruppiert. Auf diese Instruktionsliste werden verschiedene Regeln zur Optimierung angewendet, sowie Instruktionen zur Speicherung und Wiederherstellung des Statusregisters eingefügt. Danach wird entsprechender x86-64 Assembler generiert -- das Beispiel wird zu folgendem Code übersetzt (ohne Optimierung):
+
+\begin{lstlisting}
+	prologue
+	mov A, 2
+	write_byte 0x2000, A
+	write_byte 0xfffd, A
+	mov A, [aMem + 0xda1d]
+	cmp A, 3
+	save_cc
+	restore_cc
+	jz >1
+	add qword state->inst_count, 17
+	return 0x239
+1:	mov A, 0xff
+	write_byte 0xda1d, A
+	dec SP
+	dec SP
+	and SP, 0xffff
+	mov word [aMem + SP], 0x235
+	add qword state->inst_count, 28
+	mov byte state->return_reason, REASON_CALL
+	return 0x9e8
+\end{lstlisting}
+
+Zur Vereinfachung werden einige Makros verwendet:
+\begin{description}
+\item[prologue]
+sichert alle nötigen Register und stellt die Gameboy-Registerinhalte wieder her.
+\item[return]
+sichert alle Registerhalte in der gb\_state struct, stellt die ursprünglichen Registerinhalte wieder her, schreibt das Argument in das Ergebnisregister und verlässt die Funktion mit RET.
+\item[write\_byte]
+ruft die Funktion gb\_memory\_write.
+\item[save\_cc]
+sichert das Statusregister auf den Stack.
+\item[restore\_cc]
+stellt das Statusregister vom Stack wieder her.
+\end{description}
+
+\emph{aMem} bezeichnet das Register r8, das die Basisadresse des Gameboy-Adressraums enthält, \emph{state} das Register r9, das die Adresse des gb\_state enthält. \emph{state->inst\_count} zählt ausgeführten Gameboy Taktzyklen, \emph{state->return\_reason} gibt an, welche Instruktion den Block beendet, um den Backtrace im Debugger zu aktualisieren.
+
+Im nächsten Schritt wird \emph{dynasm} genutzt um den Code zu assemblieren und in einen vorallokierten Speicherbereich zu schreiben. Nachdem dieser mittels mprotect ausführbar gemacht wurde kann die Funktion ausgeführt werden. Um eine erneute Ausführung zu beschleunigen, wird der Funktionszeiger über die Startadresse indexiert gespeichert. Die durch die Funktion zurückgelieferte Speicheradresse ist die Startadresse des nächsten auszuführenden Blocks\footnote{Tritt ein Interrupt auf, wird sie stattdessen auf den Gameboy-Stack gelegt und die Startadresse des Interrupthandlers angesprungen}.
+
+Wird eine Speicheradresse innerhalb des RAM angesprungen, muss davon ausgegangen werden, dass sich die Instruktionfolge bei der nächsten Ausführung geändert hat. Blöcke innerhalb des RAM werden daher nach der Ausführung wieder verworfen. Eine Ausnahme bilden Blöcke innerhalb der Adressen 0xFF80 bis 0xFFFE: während DMA-Transfers muss kurzzeitig in diesen Bereich gesprungen werden. Die Routine, die auf das Ende des Transfers wartet ändert sich dabei gewöhnlich während der Ausführung des Programms nicht. Es lohnt sich deshalb die Blöcke bis zu einem Schreibzugriff in diesen Speicherbereich zwischenzuspeichern.
+
 \subsection{Optimierung}
+
+Nach dem Lesen eines Instruktionsblocks werden einige Regeln zur Optimierung angewendet. Schleifen unterbrechen durch eine große Anzahl an Sprüngen den Programmablauf sehr häufig und verursachen damit einen sehr hohen Overhead zur Sicherung und Wiederherstellung der Registerinhalte sowie zur Überprüfung auf Interrupts. Aus diesem Grund dienen die meisten implementierten Optimierungen der Erkennung und Behandlung von Schleifen.
+
+Schleifen können am einfachsten an einem Sprung auf die Startadresse des aktuellen Blocks erkannt werden, da spätestens nach der ersten Iteration und dem Rücksprung auf den Schleifenbeginn ein neuer Block ab dieser Startadresse übersetzt wird.
+
+Falls im Schleifenrumpf kein lesender oder schreibender Speicherzugriff stattfindet und alle Interrupts mit RET oder RETI zurückkehren, kann die gesamte Schleife atomar ausgeführt werden. Es ist in diesem Fall unerheblich ob ein Interrupt vor, während oder nach der Schleife ausgeführt wird. Gerade einfache Warteschleifen, die eine feste Zahl von Taktzyklen warten, können so beschleunigt werden: der Rücksprung an den Blockanfang wird direkt ausgeführt, ohne zwischenzeitlich die Kontrolle an die Laufzeitumgebung abzugeben und auf Interrupts zu prüfen.
+
+Auch schreibende Speicherzugriffe können meist gefahrlos durchgeführt werden. Ein Interrupthandler kann jedoch in diesem Fall eventuell durch die Schleife beeinflusst werden und sich durch die zusätzlich ausgeführten Schleifeniterationen fehlerhaft verhalten. Lesende Speicherzugriffe bergen dagegen ein erhebliches Risiko: eine Warteschleife, die auf einen Interrupt oder Timer wartet, terminiert eventuell nicht mehr. Da der lesende Zugriff auf Timervariablen und Statusregister meist mit speziellen Instruktionen erfolgt (LDH A, (a8) oder LDH A, (C)), werden in höheren Optimierungsstufen andere lesende Instruktionen in Schleifen erlaubt.
+
+Die folgende Schleife führt ein memset auf einem Speicherbereich der Länge BC mit Endadresse HL durch und kann mit obigen Optimierungen unterbrechungsfrei ausgeführt werden:
+
+\begin{lstlisting}
+32			LD (HL-), A		; Byte setzen und HL dekrementieren
+05			DEC B
+20 FC		JR NZ, 0xFC		; an Anfang springen
+0D			DEC C
+20 F9		JR NZ, 0xF9		; an Anfang springen
+\end{lstlisting}
+
+Andere Optimierungen suchen mittels pattern matching nach bekannten und häufigen Instruktionsfolgen, die sich vereinfachen lassen. Das folgende häufig verwendete Muster wartet bis eine bestimmte Displayzeile gezeichnet wird\footnote{Es kann auch auf einen VBLANK gewartet werden, wenn die Zeile > 144 ist.}:
+
+\begin{lstlisting}
+F0 44		LDH A, (0x44)	; aktuelle Displayzeile lesen
+FE ??		CP A, ??		; mit festem Wert vergleichen
+20 FA		JR NZ, 0xFA		; an Anfang springen
+\end{lstlisting}
+
+In der Emulation kann stattdessen eine modifizierte HALT-Instruktion eingefügt werden, die statt auf einen Interrupt auf das Zeichnen der entsprechenden Displayzeile wartet.
 
 %Schematischer Aufbau
 %Designziel direkte Reads
@@ -203,6 +335,8 @@ Direkte lesende Zugriffe haben einige wichtige Implikationen:
 \section{Grafik- / Audioausgabe}
 %Grafikthread, Zeilenweiser Aufbau
 %Audiobuffer, Auswertung mit jedem Frame
+\section{Bedienung}
+%Programmoptionen, Tastenbelegung, Savegames
 \section{Debugger}
 %unterstützte Befehle, visualisierung des Adressraums, patch, print, set, ...
 \section{Kompatibilität}
