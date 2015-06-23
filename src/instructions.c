@@ -1,5 +1,4 @@
 #include "instructions.h"
-//#include "optimize.tab.h"
 
 gb_instruction inst_table[] = {
 /* CODE    OPCODE  ARG1    ARG2    PTR/ADDR BYTES CYCLES  FLAGS*/
@@ -535,34 +534,6 @@ bool optimize_cc(GList* inst) {
     }
     
     return true;
-}
-
-GList *instructions_to_compile = NULL;
-GList *opt_result = NULL;
-
-bool optimize(GList** instructions) {
-    instructions_to_compile = *instructions;
-    yyparse();
-    g_list_free(*instructions);
-    *instructions = opt_result;
-    return true;
-}
-
-int yylex() {
-    if(instructions_to_compile == NULL)
-        return END_OF_BLOCK;
-
-    yylval = g_list_append(NULL, instructions_to_compile->data);
-
-    int opcode = DATA(instructions_to_compile)->opcode;
-    instructions_to_compile = instructions_to_compile->next;
-
-    return opcode;
-}
-
-void yyerror (char const *s)
-{
-    fprintf (stderr, "%s\n", s);
 }
 
 // compiles block starting at start_address to gb_block

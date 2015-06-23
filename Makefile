@@ -6,7 +6,7 @@ LDFLAGS = -std=gnu11
 LIBS = -lSDL2 -lreadline `pkg-config --libs glib-2.0` -lm -lstdc++
 BIN = dynasmgb
 OBJ = core.o instructions.o lcd.o memory.o emit.o interrupt.o main.o \
-      memory_inspector.o savestate.o sound_blargg.o optimize.tab.o optimize.o \
+      memory_inspector.o savestate.o sound_blargg.o optimize.o \
       Blip_Buffer.o Gb_Apu.o Gb_Oscs.o Multi_Buffer.o debugger.o
 
 all: CFLAGS += -O3 -flto -ggdb
@@ -24,10 +24,10 @@ debug_cg: $(BIN)
 $(BIN): $(OBJ)
 	$(CC) $(LDFLAGS) -o $@ $+ $(LIBS)
 	
-%.o: src/%.c src/optimize.tab.h
+%.o: src/%.c
 	$(CC) -c $(CFLAGS) $<
 
-%.o: src/%.cpp src/optimize.tab.h
+%.o: src/%.cpp
 	$(CXX) -c $(CXXFLAGS) -I src/Gb_Snd_Emu-0.1.4/gb_apu $<
 	
 %.o: src/Gb_Snd_Emu-0.1.4/gb_apu/%.cpp
@@ -36,11 +36,5 @@ $(BIN): $(OBJ)
 src/%.c: src/%.dasc
 	lua5.2 dynasm/dynasm.lua $(DYNASMFLAGS) -I src -o $@ $<
 	
-src/%.tab.c: src/%.y
-	yacc -d -o $@ $<
-
-src/%.tab.h: src/%.tab.c
-	@
-
 clean:
 	rm -f $(BIN) $(OBJ)
