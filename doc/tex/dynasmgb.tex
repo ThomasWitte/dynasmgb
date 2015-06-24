@@ -7,6 +7,7 @@
 \usepackage{xcolor}
 \usepackage{courier}
 \usepackage{listings}
+\usepackage{pdfpages}
 
 \lstdefinelanguage
    [x64]{Assembler}     % add a "x64" dialect of Assembler
@@ -335,11 +336,107 @@ In der Emulation kann stattdessen eine modifizierte HALT-Instruktion eingefügt 
 \section{Grafik- / Audioausgabe}
 %Grafikthread, Zeilenweiser Aufbau
 %Audiobuffer, Auswertung mit jedem Frame
-\section{Bedienung}
-%Programmoptionen, Tastenbelegung, Savegames
+\section{Bedienung / Installation}
+
+Die vollständigen Quellen des vorgestellten Emulators sind unter ?? verfügbar und lassen sich mit git klonen. Um das Programm zu übersetzen und auszuführen wird ein x86-64 Linux\footnote{Das Programm lässt sich eventuell auch unter Apple OSX oder Windows mit cygwin übersetzen, dies wurde aber nie getestet.} und folgende Bibliotheken und Programme benötigt:
+
+\begin{itemize}
+\item gcc/g++ 4.8
+\item lua 5.2
+\item lua-bitop
+\item libreadline(-dev)
+\item libsdl2(-dev)
+\item libglib-2.0(-dev)
+\end{itemize}
+
+Die zusätzlichen Bibliotheken dynasm (Laufzeitassembler) und Gb\_Snd\_Emu (Gameboy Sound Emulation) liegen dem Repository in kompatiblen Versionen bei. Zum Übersetzen reicht ein Aufruf von make.
+
+dynasmgb bietet derzeit keine graphischen Konfigurationsmöglichkeiten. Um ein Spiel zu starten reicht ein Aufruf von \verb|./dynasmgb game.gb| im Hauptverzeichnis. Folgende zusätzliche Kommandozeilenoptionen werden unterstützt:
+
+\begin{description}
+\item[-d] Aktiviert direkt beim Start die Debuggerkonsole.
+\item[-O] Aktiviert die Optimierungen in mehreren Stufen (-O0 bis -O3).
+\item[-b] Setzt direkt beim Start einen Breakpoint, bei dessen Erreichen die Debuggerkonsole gestartet wird.
+\item[-?] Gibt eine kurze Übersicht aller Kommandozeilenoptionen aus.
+\end{description}
+
+Während das Spielfenster den Fokus besitzt, werden die in Abbildung~\ref{tab:keys} dargestellten Tastenkombinationen unterstützt\footnote{Während der Debugger gestartet ist werden Tastaturevents entgegengenommen, aber erst verarbeitet, wenn der Debugger wieder verlassen wird.}. Die Tastenbelegungen lassen sich derzeit noch nicht konfigurieren.
+
+\begin{figure}[htbp]
+\centering
+\begin{tabular}{c|c}
+Taste&Funktion \\
+\hline
+a&Gameboy Knopf „A“ \\
+b&Gameboy Knopf „B“ \\
+y&Gameboy Knopf „Start“ \\
+x&Gameboy Knopf „Select“ \\
+Pfeiltasten&Gameboy Richtung \\
+d&Debuggerkonsole aktivieren \\
+F2&Speicherabzug schreiben \\
+F3&Speicherabzug lesen \\
+ESC&dynasmgb beenden
+\end{tabular}
+\caption{dynasmgb Tastaturbelegung}
+\label{tab:keys}
+\end{figure}
+
+Beim Spielstart werden im Terminal einige Informationen aus dem ROM-Header ausgegeben (Abbildung~\ref{img:zelda_start}).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{img/zelda_start}
+\caption{ROM-Header Informationen für das Spiel „The Legend of Zelda -- Link's Awakening DX“.}
+\label{img:zelda_start}
+\end{figure}
+
+Beim Verlassen des Spiels werden einige Statistiken zur Emulation ausgegeben: Neben der Gesamtzahl übersetzter (und gespeicherter) Blöcke wird die Startadresse des am häufigsten ausgeführten Blocks ausgegeben. Dies hilft besonders kritische Schleifen zu erkennen und entsprechende Optimierungsregeln zu schreiben. Zuletzt wird noch die Gesamtzahl ausgeführter Blöcke, die durchschnittliche Anzahl ausgeführter Blöcke pro Frame und die Anzahl angezeigter Frames angezeigt.
+
+Falls das Spiel eine oder mehrere RAM-Bänke innerhalb der Cartridge besitzt, werden diese beim Beenden zusätzlich im Verzeichnis des Spiels als .sav-Datei gespeichert. Beim Spielstart wird der Inhalt einer solchen Datei -- falls vorhanden -- wieder in den Speicher geladen. Dies simuliert die batteriegepufferten RAM-Bänke, die in vielen Spielen zum Speichern von Spielständen verwendet werden.
+
 \section{Debugger}
+
+Um Emulationsfehler effektiv zu verfolgen und lokalisieren wurde eine Debuggerkonsole für das aktuell ausgeführte Spiel implementiert. Sie lässt sich durch Drücken der Taste 'd' zu einem beliebigen Zeitpunkt im Spiel, über die Startoption '-d' oder bei Erreichen eines Breakpoints aktivieren.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\linewidth]{img/debugger}
+\caption{Debuggerkonsole.}
+\label{img:debugger}
+\end{figure}
+
+Mögliche Befehle sind:
+\begin{description}
+\item[backtrace] Gibt den aktuellen Aufrufstack aus. Dabei wird für jeden Stackframe die Startadresse des ersten ausgeführten Blocks ausgegeben. Handelt es sich bei einem Aufruf um einen Interrupt, wird dieser rot darbestellt. Restarts werden dagegen grün dargestellt. Da sich die für den Backtrace nötigen Informationen aufgrund eines möglicherweise von Spiel zu Spiel unterschiedlichen Stacklayouts nicht oder nur schwer aus dem Speicher gewinnen lassen wird parallel zur Ausführung des Spiels bei jeder CALL oder RET Instruktion und Interrupts der Debuggerstack aktualisiert. Einige Spiele manipulieren den Aufrufstack zusätzlich durch andere Instruktionen oder kehren nicht mittels RET aus Funktionen oder Interrupts zurück -- in diesen Fällen sind die angezeigten Informationen fehlerhaft.
+\item[break] Setzt einen Breakpoint für eine Startadresse eines Blocks. Bei einem Sprung auf die angegebene Adresse wird die Debuggerkonsole gestartet. Die Adresse muss dabei genau die Startadresse eines Blocks sein, Adressen innerhalb eines Blocks werden ignoriert. Derzeit wird nur ein einziger Breakpoint unterstützt und bei jedem ausgeführten Block überprüft, ob der Breakpoint erreicht wurde. Eine alternative Implementierung, die den entsprechenden Block so verändert, dass der Debugger gestartet wird und damit eine beliebige Anzahl Breakpoints ohne zusätzlichen Overhead unterstützt, ist bisher noch nicht umgesetzt aber denkbar.
+\item[call] Ruft eine Funktion an einer bestimmten Speicheradresse auf. Im Unterschied zu einem „set PC \emph{address}“ kann mit einer RET-Instruktion wieder zur aktuellen Adresse zurückgekehrt werden. Ein Aufruf von „call 0x1234“ hat den gleichen Effekt wie „exec CD 34 12“, ohne dass der instruction\_count erhöht wird.
+\item[continue] Verlässt die Debuggerkonsole und setzt das Spiel fort. Die Tastenkombination Strg+D hat den gleichen Effekt.
+\item[exec] Übersetzt und führt eine beliebige Bytefolge aus. Die Bytes werden hexadezimal angegeben und können durch Leerzeichen oder Kommata getrennt werden. Die Bytefolge darf maximal 100 Byte lang sein. Falls die Bytefolge nicht mit einer Sprunginstruktion beendet, die den Block beendet, wird der Block stattdessen automatisch mit einer Sprunginstruktion beendet, die zur aktuellen Adresse zurückkehrt. Die Instruktionsfolge wird wie jeder andere Block, aber ohne Optimierung übersetzt. Die Ausführung beeinflusst insbesondere auch den instruction\_count und damit Timer und Interruptzeitpunkte.
+\item[find] Durchsucht den gesamten Adressraum nach der angegebenen Bytefolge. Die Bytes werden hexadezimal angegeben und können durch Leerzeichen oder Kommata getrennt werden. Die Bytefolge darf maximal 20 Byte lang sein. Um die Fundstellen wird ein Kontext von jeweils 10 Byte angezeigt.
+\item[help] Gibt die Abbildung~\ref{img:debugger} dargestellte Hilfe aus.
+\item[meminspect] Öffnet ein zusätzliches „Memory Inspector“ sowie ein „Address Space“-Fenster. Dieses zeigt in der linken Hälfte eine Liveansicht aller schreibenden Schreibzugriffe auf die oberen 32kB des Gameboy Adressraums. In der rechten Hälfte werden unten die Gesamtzahl, sowie die aktuell in den Adressraum eingeblendeten ROM (orange) und RAM-Bänke (türkis) angezeigt. In der rechten oberen Hälfte wird eine Detailansicht der IO-Register zwischen 0xFF00 und 0xFF4F dargestellt (pink). Da nur Schreibzugriffe registriert werden, die den Speicherinhalt verändern und die Ansicht mit jedem VBLANK-Interrupt aktualisiert wird, werden Änderungen an bestimmten IO-Registern (wie zB LY) nicht angezeigt. Das „Memory-Inspector“-Fenster visualisiert die Background Tile Map, sowie die Tile Data Table für beide möglichen Startadressen (0x8000 und 0x8800). Ein weiterer Aufruf von „meminspect“ schließt das Fenster wieder.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{img/meminspect}
+\caption{Das Spiel „Metroid II -- Return of Samus“ mit geöffnetem memory inspector.}
+\label{img:meminspect}
+\end{figure}
+
+\item[patch] Ersetzt den Block mit der angegebenen Startadresse durch die angegebene Bytefolge. Es gelten die gleichen Einschränkungen wie für exec. Falls der angegebene Block nicht mit einem Sprung oder einer anderen den Block beendenden Instruktion endet wird stattdessen die aktuelle Adresse angesprungen.
+\item[print] Gibt den Speicherinhalt an der (hexadezimal) angegebenen Adresse aus. Um den Wert eines Registers auszugeben kann stattdessen „registers“ verwendet werden.
+\item[quit] Beendet die Emulation. Gleicher Effekt wie ESC, während das Spiel läuft.
+\item[recompile] Übersetzt den Block mit der angegebenen Startadresse neu. Dabei werden keine Optimierungen angewendet. Eventuell mit „patch“ gemachte Änderungen an diesem Block werden rückgängig gemacht.
+\item[registers] Gibt die Werte aller Register aus.
+\item[set] Setzt den Wert eines Registers oder einer Speicheradresse. Um einen Registerwert zu ändern muss als erstes Argument das Register angegeben werden (zB „set PC 0x100“ um das Spiel zu resetten). Ist das erste Argument eine Adresse wird der entsprechende Wert in den Speicher geschrieben (zB „set 0xFFFE 0x42“). Zum Setzen der Speicheradresse wird -- wie in übersetzten Blöcken -- die Funktion write\_byte verwendet, sodass ein Schreibzugriff auf den ROM eventuell keinen Effekt hat oder zu einem Bankwechsel führt.
+\item[step] Führt den nächsten Block aus. Eine leere Zeile im Debugger hat den gleichen Effekt. Derzeit wird kein Stepping über einzelne Instruktionen unterstützt.
+\item[watch] Setzt einen Watchpoint für eine Speicheradresse. Ändert sich der Wert der Speicheradresse, pausiert die Emulation am Ende des Blocks und die Debuggerkonsole wird angezeigt. Derzeit kann erst am Ende des Blocks in dem der Zugriff erfolgt gestoppt und maximal ein Watchpoint gesetzt werden, da nach jedem ausgeführten Block überprüft wird, ob sich die überwachte Adresse geändert hat.
+\end{description}
 %unterstützte Befehle, visualisierung des Adressraums, patch, print, set, ...
 \section{Kompatibilität}
 %Screenshots, bekannte Probleme
 \section{Ausblick / offene Punkte}
+
+\includepdf[pages={1}, landscape]{img/OPCODES1.pdf}
+\includepdf[pages={1}, landscape]{img/OPCODES2.pdf}
 \end{document}

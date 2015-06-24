@@ -9,8 +9,8 @@ OBJ = core.o instructions.o lcd.o memory.o emit.o interrupt.o main.o \
       memory_inspector.o savestate.o sound_blargg.o optimize.o \
       Blip_Buffer.o Gb_Apu.o Gb_Oscs.o Multi_Buffer.o debugger.o
 
-all: CFLAGS += -O3 -flto -ggdb
-all: LDFLAGS += -O3 -flto -ggdb
+all: CFLAGS += -O3 -flto
+all: LDFLAGS += -O3 -flto
 all: $(BIN)
 
 debug: CFLAGS += -g -D DEBUG -D DEBUG_CG
@@ -28,10 +28,10 @@ $(BIN): $(OBJ)
 	$(CC) -c $(CFLAGS) $<
 
 %.o: src/%.cpp
-	$(CXX) -c $(CXXFLAGS) -I src/Gb_Snd_Emu-0.1.4/gb_apu $<
+	$(CXX) -c $(CXXFLAGS) -I Gb_Snd_Emu-0.1.4/gb_apu $<
 	
-%.o: src/Gb_Snd_Emu-0.1.4/gb_apu/%.cpp
-	$(CXX) -c $(CXXFLAGS) -I src/Gb_Snd_Emu-0.1.4/gb_apu $<
+%.o: Gb_Snd_Emu-0.1.4/gb_apu/%.cpp
+	$(CXX) -c $(CXXFLAGS) -I Gb_Snd_Emu-0.1.4/gb_apu $<
 	
 src/%.c: src/%.dasc
 	lua5.2 dynasm/dynasm.lua $(DYNASMFLAGS) -I src -o $@ $<
