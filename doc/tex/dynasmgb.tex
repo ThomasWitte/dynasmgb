@@ -3,11 +3,13 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage[ngerman]{babel}
+\usepackage{caption}
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{courier}
 \usepackage{listings}
 \usepackage{pdfpages}
+\usepackage{float}
 
 \lstdefinelanguage
    [x64]{Assembler}     % add a "x64" dialect of Assembler
@@ -434,9 +436,143 @@ Mögliche Befehle sind:
 \end{description}
 %unterstützte Befehle, visualisierung des Adressraums, patch, print, set, ...
 \section{Kompatibilität}
-%Screenshots, bekannte Probleme
-\section{Ausblick / offene Punkte}
 
+Wie beschrieben implementiert dynasmgb einen Großteil der Gameboy-Architektur und Funktionalität. Der jit-Übersetzer unterstützt den kompletten Gameboy-Befehlssatz sowie wichtige Interrupts. Derzeit fehlt eine Implementierung serieller Transfers sowie des entsprechenden Interrupts.
+
+Die Grafikemulation unterstützt alle drei Zeichenebenen (Background, Window und Sprites) nahezu vollständig. Die Reihenfolge in der die Sprites gezeichnet werden kann jedoch vom Gameboy abweichen.
+
+Bekannte Hardwarefehler und Limitierungen des Gameboys -- unter anderem der Sprite RAM Bug, oder das Limit von 10 Sprites pro Zeile -- werden nicht emuliert. Der interne RAM wird im Unterschied zum Gameboy nicht in den Adressbereich zwischen 0xE000 und 0xFDFF gespiegelt.
+
+Die Kompatibilität wird zusätzlich durch das möglicherweise ungenaue Timing der Interrupts und Timer-Register, sowie durch Unterschiede beim Setzen des Statusregisters eingeschränkt.
+
+Der Emulator wurde anhand verschiedener Testroms, Beispielroms sowie komerzieller Spiele getestet.
+
+\subsection{Blargg's GB Instruction Test}
+
+\begin{figure}[H]
+\minipage{0.45\textwidth}
+  \includegraphics[width=\linewidth]{img/test_rom_fail}
+\endminipage\hfill
+\minipage{0.45\textwidth}
+  \includegraphics[width=\linewidth]{img/test_rom_pass}
+\endminipage
+\caption{Blagg's GB Instruction Test (Einzelne Testfälle).}
+\label{img:inst_test}
+\end{figure}
+
+Der Test umfasst 11 Testfälle, die sämtliche Gameboyinstruktionen ausführen und die Registerinhalte nach der Ausführung mit einer CRC-Checksumme vergleichen. Dabei werden sämtliche Kombinationen von Eingabewerten und Statusflags überprüft.
+
+\begin{figure}[H]
+\centering
+\begin{tabular}{l|c|c}
+Testfall&Status&Erfolgreich \\
+\hline
+01-special&failed&4/5 \\
+02-interrupts&failed&0/4 \\
+03-op sp,hl&failed&3/8 \\
+04-op r,imm&failed&15/16 \\
+05-op rp&failed&6/9 \\
+06-ld r,r&passed&64/64 \\
+07-jr,jp,call,ret,rst&passed&29/29 \\
+08-misc instrs&passed&19/19 \\
+09-op r,r&failed&73/134 \\
+10-bit ops&failed&112/168 \\
+11-op a,(hl)&failed&32/51
+\end{tabular}
+\caption{Blagg's GB Instruction Test -- Ergebnisse.}
+\label{tab:inst_test}
+\end{figure}
+
+\pagebreak
+\subsection{GBDK Beispiel ROMs / PD ROMs}
+
+Das Gameboy Development Kit (GBDK) ist eine inoffizielle Toolchain zur Entwicklung von Gameboy-Spielen in C. Es enthält einige Beispielprogramme, die zum Testen des Emulators verwendet werden können, da sie meist nur eine bestimmte Funktionalität des Gameboy ausgiebig nutzen.
+
+\begin{figure}[H]
+\centering
+\minipage{0.41\textwidth}
+  \includegraphics[width=\linewidth]{img/filltest}\vspace{0.7cm}
+  \includegraphics[width=\linewidth]{img/rpn}
+\endminipage\hspace{0.7cm}
+\minipage{0.41\textwidth}
+  \includegraphics[width=\linewidth]{img/space}\vspace{0.7cm}
+  \includegraphics[width=\linewidth]{img/rand}
+\endminipage
+\caption{GBDK Test ROMs.}
+\end{figure}
+
+\pagebreak
+\subsection{Kommerzielle Gameboy Spiele}
+
+\begin{figure}[H]
+\minipage{0.41\textwidth}
+  \includegraphics[width=\linewidth]{img/tetris}
+\endminipage\hfill
+\minipage{0.53\textwidth}
+  \paragraph{Tetris}
+  Tetris wurde zusammen mit dem Gameboy~Classic verkauft und ist daher das meistverkaufte Spiel für den Gameboy. Da das Spiel eine Größe von nur 32kB hat, kommt es ohne MBC aus. Es wird keine HALT-Instruktion verwendet, sodass es ein großes Optimierungspotential besitzt. Für die korrekte Emulation ist nur ein geringer Teil aller Features des Gameboy notwendig: selbst ohne Timeremulation ist das Spiel begrenzt lauffähig; der Zufallszahlengenerator um den nächsten Block auszuwählen funktioniert dann jedoch nicht.
+%  \vspace{5cm}
+\endminipage
+\end{figure}
+
+\begin{figure}[H]
+\minipage{0.41\textwidth}
+  \includegraphics[width=\linewidth]{img/mario}
+\endminipage\hfill
+\minipage{0.53\textwidth}
+  \paragraph{Super Mario World}
+  Da Super Mario World eine ROM-Größe von 64kB besitzt wird ein MBC1 zur Verwaltung der vier Speicherbänke verwendet. Das Spiel nutzt fast alle graphischen Effekte bei der Spritedarstellung  und benötigt ein funktionierendes Scrollen des Hintergrunds. Eine korrekte Timer-Emulation sowie eine funktionierende DAA-Instruktion sind notwendig um die Zeitanzeige korrekt darzustellen und das Level wechseln zu können. Es wird eine größere Palette an Instruktionen verwendet als bei Tetris.
+%  \vspace{5cm}
+\endminipage
+\end{figure}
+
+\begin{figure}[H]
+\minipage{0.41\textwidth}
+  \includegraphics[width=\linewidth]{img/pokemon}
+\endminipage\hfill
+\minipage{0.53\textwidth}
+  \paragraph{Pokémon Blaue Edition}
+  Pokémon nutzt nahezu alle Funktionen des Gameboy. Zur Verwaltung des 1MB (64 Bänke) großen ROMs und der RAM-Bänke wird ein MBC5 genutzt. Um die Speicherfunktion umsetzen zu können, müssen die RAM-Bänke gespeichert werden. Da das Spiel eine Vielzahl graphischer Effekte (Wellen, invertierte Farben, etc.) für Animationen nutzt, muss sowohl ein genaues Timing, als auch eine Unterstützung sämtlicher graphischer Features existieren.
+%  \vspace{5cm}
+\endminipage
+\end{figure}
+
+Bei der Entwicklung wurde darauf geachtet, eine korrekte Emulation der oben genannten Spiele sicherzustellen. Es sind keine Fehler in diesen Spielen mehr bekannt, außer minimalen graphischen Fehlern in Pokémon (In manchen Scrollanimationen ist eine einzelne Zeile falsch plaziert), die wahrscheinlich durch ungenauigkeiten im Timing verursacht werden. Fast alle anderen getesteten kommerziellen Spiele funktionieren zu großen Teilen, weisen aber kleinere, das Spiel beeinflussende Fehler auf.
+
+\begin{figure}[H]
+\centering
+\minipage{0.41\textwidth}
+  \includegraphics[width=\linewidth]{img/zelda}
+  \captionsetup{labelformat=empty}
+  \caption{Zelda -- Link's Awakening DX}
+\endminipage\hspace{0.7cm}
+\minipage{0.41\textwidth}
+  \includegraphics[width=\linewidth]{img/alleyway}
+  \captionsetup{labelformat=empty}
+  \caption{Alleyway}
+\endminipage \vspace{0.5cm}
+
+\minipage{0.41\textwidth}
+  \includegraphics[width=\linewidth]{img/metroid}
+  \captionsetup{labelformat=empty}
+  \caption{Metroid II -- Return of Samus}
+\endminipage\hspace{0.7cm}
+\minipage{0.41\textwidth}
+  \includegraphics[width=\linewidth]{img/starocean}
+  \captionsetup{labelformat=empty}
+  \caption{Star Ocean -- Blue Sphere}
+\endminipage
+
+\addtocounter{figure}{-4}
+\caption{Beispiele für andere, größtenteils funktionierende Spiele.}
+\end{figure}
+
+%Screenshots, bekannte Probleme
+%\section{Ausblick / offene Punkte}
+
+%gbc ...
+\clearpage
+\pagebreak
 \includepdf[pages={1}, landscape]{img/OPCODES1.pdf}
 \includepdf[pages={1}, landscape]{img/OPCODES2.pdf}
 \end{document}
