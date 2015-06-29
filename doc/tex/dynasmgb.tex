@@ -3,6 +3,10 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage[ngerman]{babel}
+
+\usepackage{hyperref}
+
+\usepackage{wrapfig}
 \usepackage{caption}
 \usepackage{graphicx}
 \usepackage{xcolor}
@@ -10,6 +14,11 @@
 \usepackage{listings}
 \usepackage{pdfpages}
 \usepackage{float}
+
+\usepackage{microtype}
+
+\usepackage[backend=bibtex]{biblatex} 
+\addbibresource{dynasmgb.bib}
 
 \lstdefinelanguage
    [x64]{Assembler}     % add a "x64" dialect of Assembler
@@ -51,6 +60,11 @@
   aboveskip=2em
 }
 
+% Hurenkinder und Schusterjungen verhindern
+\clubpenalty10000
+\widowpenalty10000
+\displaywidowpenalty=10000
+
 \title{Entwicklung eines Gameboy-Emulators}
 \author{Thomas Witte}
 \date{\today}
@@ -62,14 +76,30 @@
 
 Der 1989 von Nintendo hergestellte Gameboy ist mit über 100 Millionen verkauften Einheiten eine der erfolgreichsten Spielekonsolen überhaupt.
 
-…
+\begin{wrapfigure}{r}{0.4\textwidth}
+%\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\linewidth]{img/Gameboy.jpg}
+\caption{Gameboy der ersten Generation.}
+\label{img:gameboy}
+%\end{figure}
+\end{wrapfigure}
+
+Da die meisten für den Gameboy erschienenen Spiele nur in binärer Form als ROM-Abbild vorliegen, ist eine Portierung auf aktuelle Systeme ausgeschlossen. Eine Alternative bietet die Emulation der Gameboy-Architektur: es wird eine möglichst exakt dem Gameboy gleichende Laufzeitumgebung bereitgestellt, die in der Lage ist, das unmodifizierte Programm auszuführen. Dazu müssen neben der CPU auch sämtliche anderen Schnittstellen (Ein-/Ausgabe, Speicher, etc.) bereitgestellt werden.
+
+Aufgrund der inkompatiblen Prozessorarchitekturen kann die Instruktionsfolge des emulierten Programms nicht direkt ausgeführt werden: entweder wird sie Instruktion für Instruktion interpretiert, also der Fetch-Execute-Cycle in Software durchgeführt, oder in kompatible Instruktionen übersetzt. Das zweite Verfahren -- oft „dynarec“ oder „jit-compiler“ genannt -- wird in vielen Emulatoren aufgrund der potentiell höheren Geschwindigkeit verwendet \cite{pcsx2_introduction}.
+
+Die Übersetzung der Instruktionen geschieht meist dynamisch zur Laufzeit, da durch statische Analyse nur schwer -- zB durch verfolgen aller möglichen Ausführungspfade ab einem bekannten Einsprungpunkt -- zwischen Daten und Programmtext unterschieden werden kann. Selbstmodifizierender Code und das Anspringen von zur Laufzeit berechneten Adressen macht bei statischer Übersetzung zusätzlich häufig eine Rückfall auf Interpretation oder dynamische Übersetzung zur Laufzeit notwendig \cite{nes_recompiler}.
+
+Der im Zuge des Projekts entstandene Emulator „dynasmgb“ führt daher eine dynamische Übersetzung der Prozessorinstruktionen aus. Sämtliche anderen Schnittstellen (Grafik, Sound, Speicher) werden jedoch weiterhin vollständig in Software umgesetzt.
+
 %Warum ist Emulation notwendig
 %Was muss emuliert werden
 %Interpretation vs jit vs aot
 %existierende Gameboy Emulatoren
 \section{Gameboy Architektur}
 
-Die folgenden Abschnitte fassen Aufbau und Funktionsweise des klassischen Gameboys zusammen. Auf die Unterschiede zum Gameboy Color und Super Gameboy wird nicht eingegangen.
+Die folgenden Abschnitte fassen Aufbau und Funktionsweise des klassischen Gameboys zusammen. Auf die Unterschiede zum Gameboy Color und Super Gameboy wird nicht eingegangen. Details finden sich in \cite{cpu_manual}\cite{gb_programming_manual}\cite{pandocs}.
 
 \subsection{Hardware}
 
@@ -93,7 +123,7 @@ Der Befehlssatz umfasst insgesamt 500 verschiedene Befehle variabler Instruktion
 
 Die Ausführungszeit der Befehle beträgt jeweils zwischen 4 und 24 Taktzyklen. Damit beträgt der maximale Befehlsdurchsatz 1MOps/s.
 
-Eine Übersicht sämtlicher Befehle befindet sich im Anhang.
+Eine Übersicht sämtlicher Befehle befindet sich unter \cite{gameboy_opcodes}, sowie im Anhang.
 
 %Bild im Anhang, wichtige Instruktionen
 \subsection{Interrupts}
@@ -125,7 +155,7 @@ Ist ein Interrupt anhängig, das entsprechende Bit im Interrupt Enable Register 
 
 Der adressierbare Adressraum des Gameboys beträgt 64kB. In die unteren 32kB (0x0 - 0x7FFF) werden zwei Rombänke à 16kB gleichzeitig eingeblendet. Der Wechsel zwischen den Rombänken geschieht durch den MBC innerhalb der Cartridge. Alle verfügbaren MBCs lösen einen Wechsel der oberen Rombank durch Schreibzugriffe auf bestimmte Adressen im ROM aus.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.75\linewidth]{img/mmap.pdf}
 \caption{Visualisierung der oberen 32kB des Adressraums (Pokémon Blaue Edition)}
@@ -192,7 +222,7 @@ Kanal 4 erzeugt weißes Rauschen. Dabei kann die Rauschcharakteristik beeinfluss
 %Timing, Effekte, Register
 \section{Aufbau des jit-Übersetzers}
 
-Für die Emulation der Gameboy Hardware auf herkömmlichen PCs (x86-64 Architektur) wurde ein just-in-time-kompilierender Emulationskern implementiert. Anstatt einzelne Instruktionen in einer Schleife zu dekodieren und interpretieren, wie bei einem interpretierenden Emulator, wird versucht ganze Blöcke, die gewöhnlich mit einer Sprunginstruktion (JP, JR, CALL, RST, RET, RETI) enden, zusammenzufassen. Mittels des Laufzeitassemblers „dynasm“ des Luajit Projekts wird zum ersten Zeitpunkt, zu dem eine Speicheradresse angesprungen wird, dem Block entsprechende x86-Instruktionen erzeugt und ausgeführt.
+Für die Emulation der Gameboy Hardware auf herkömmlichen PCs (x86-64 Architektur) wurde ein just-in-time-kompilierender Emulationskern implementiert. Anstatt einzelne Instruktionen in einer Schleife zu dekodieren und interpretieren, wie bei einem interpretierenden Emulator, wird versucht ganze Blöcke, die gewöhnlich mit einer Sprunginstruktion (JP, JR, CALL, RST, RET, RETI) enden, zusammenzufassen. Mittels des Laufzeitassemblers „dynasm“ des Luajit Projekts \cite{dynasm_unofficial}\cite{dynasm} wird zum ersten Zeitpunkt, zu dem eine Speicheradresse angesprungen wird, dem Block entsprechende x86-Instruktionen erzeugt und ausgeführt.
 
 Ein Ziel bei der Entwicklung war, möglichst die Statusflags (Carry, Halfcarry/Adjust und Zero) der Hostarchitektur für die emulierte Umgebung zu nutzen, anstatt diese zu emulieren. Dies ist in den meisten Fällen problemlos möglich, da sich die Z80-artige Gameboy CPU und die Intel 8080-Architektur, die größtenteils auch von modernen Prozessoren unterstützt wird sehr ähnlich sind. Da das Subtract-Flag des Gameboy keine direkte Entsprechung in der x86-64 Architektur besitzt muss es als einziges der Statusflags emuliert werden.
 
@@ -336,11 +366,22 @@ In der Emulation kann stattdessen eine modifizierte HALT-Instruktion eingefügt 
 %Interrupts, Timer, etc.
 %Memory Banking
 \section{Grafik- / Audioausgabe}
+
+Da die Grafikausgabe des Gameboy -- wie beschrieben -- über spezielle Kontrollregister sowie festgelegte Speicherbereiche für Tilemaps erfolgt, muss der Emulator diese Speicherbereiche interpretieren und das entsprechende Bild pixelweise erzeugen. Es reicht nicht, den Speicher zu Beginn der VBLANK-Periode einmalig zu interpretieren und das Bild auszugeben, da viele Spiele Displaytiming ausnutzen um Grafikeffekte zu erzeugen. Sollen diese korrekt dargestellt werden, muss die Erzeugung des Bildes im Emulator ebenso Zeilenweise erfolgen.
+
+Nach jedem ausgeführten Instruktionsblock wird im Zuge der Interruptbehandlung auch das LY (ca. alle 450 Taktzyklen) und das LCDC-Register (ca. alle 80, 180, 190 Taktzyklen\footnote{mit jeder bearbeiteten Zeile durchläuft das LCDC-Register drei verschieden lang andauernde Modi.}) aktualisiert. Wird das LY-Register inkrementiert, kann die nächste Bildzeile gezeichnet werden. Nach 144 gezeichneten Zeilen, zu Beginn der VBLANK-Periode, kann schließlich das erzeugte Bild an den Render-Thread zur Anzeige weitergegeben werden. Durch einen separaten Render-Thread wird der Haupt-Thread von der langsamen Aktualisierung der Bildtextur und deren Anzeige entlastet und die Laufzeit des Haupt-Threads pro Frame mehr als halbiert.
+
+Der Beginn der VBLANK-Periode wird gleichzeitig zur Limitierung der Geschwindigkeit genutzt: Sind seit dem letzten VBLANK weniger als 1/60s vergangen, wird entsprechend lang gewartet, bevor die Ausführung fortgesetzt wird.
+
+Für die Audioausgabe existieren zwei verschiedene Implementierungen: neben der standardmäßig verwendeten Bibliothek GB\_Snd\_Emu, die alle Soundregister und Funktionen vollständig interpretieren kann und störungsfreie Wave-Samples erzeugt, existiert eine eigene unvollständige Implementierung, die nicht alle Funktionen unterstützt.
+
+SDL erwartet zur Audioausgabe eine Callbackfunktion, die einen Puffer von Wave-Samples fester Länge (ca. 6ms) füllt. Ein separater Audio-Thread spielt diese Wave-Samples ab und ruft bei Bedarf die Callbackfunktion auf um die nächsten Samples zu gewinnen. Mit jedem Aufruf der Callbackfunktion wird der zu diesem Zeitpunkt aktuelle Registersatz interpretiert und der Puffer entsprechend gefüllt. Dies ist hinreichend genau, da der kürzeste durch den Gameboy abspielbare Ton eine Länge von 4ms hat und damit eine ähnliche Auflösung wie der Audio-Thread.
+
 %Grafikthread, Zeilenweiser Aufbau
 %Audiobuffer, Auswertung mit jedem Frame
 \section{Bedienung / Installation}
 
-Die vollständigen Quellen des vorgestellten Emulators sind unter ?? verfügbar und lassen sich mit git klonen. Um das Programm zu übersetzen und auszuführen wird ein x86-64 Linux\footnote{Das Programm lässt sich eventuell auch unter Apple OSX oder Windows mit cygwin übersetzen, dies wurde aber nie getestet.} und folgende Bibliotheken und Programme benötigt:
+Die vollständigen Quellen des vorgestellten Emulators sind unter \cite{dynasmgb} verfügbar und lassen sich mit git klonen. Um das Programm zu übersetzen und auszuführen wird ein x86-64 Linux\footnote{Das Programm lässt sich eventuell auch unter Apple OSX oder Windows mit cygwin übersetzen, dies wurde aber nie getestet.} und folgende Bibliotheken und Programme benötigt:
 
 \begin{itemize}
 \item gcc/g++ 4.8
@@ -351,7 +392,7 @@ Die vollständigen Quellen des vorgestellten Emulators sind unter ?? verfügbar 
 \item libglib-2.0(-dev)
 \end{itemize}
 
-Die zusätzlichen Bibliotheken dynasm (Laufzeitassembler) und Gb\_Snd\_Emu (Gameboy Sound Emulation) liegen dem Repository in kompatiblen Versionen bei. Zum Übersetzen reicht ein Aufruf von make.
+Die zusätzlichen Bibliotheken dynasm (Laufzeitassembler \cite{dynasm}) und Gb\_Snd\_Emu (Gameboy Sound Emulation \cite{audio_lib}) liegen dem Repository in kompatiblen Versionen bei. Zum Übersetzen reicht ein Aufruf von make.
 
 dynasmgb bietet derzeit keine graphischen Konfigurationsmöglichkeiten. Um ein Spiel zu starten reicht ein Aufruf von \verb|./dynasmgb game.gb| im Hauptverzeichnis. Folgende zusätzliche Kommandozeilenoptionen werden unterstützt:
 
@@ -460,7 +501,7 @@ Der Emulator wurde anhand verschiedener Testroms, Beispielroms sowie komerzielle
 \label{img:inst_test}
 \end{figure}
 
-Der Test umfasst 11 Testfälle, die sämtliche Gameboyinstruktionen ausführen und die Registerinhalte nach der Ausführung mit einer CRC-Checksumme vergleichen. Dabei werden sämtliche Kombinationen von Eingabewerten und Statusflags überprüft.
+Blargg's GB Instruction Test \cite{test_roms} umfasst 11 Testfälle, die sämtliche Gameboyinstruktionen ausführen und die Registerinhalte nach der Ausführung mit einer CRC-Checksumme vergleichen. Dabei werden sämtliche Kombinationen von Eingabewerten und Statusflags überprüft.
 
 \begin{figure}[H]
 \centering
@@ -486,7 +527,7 @@ Testfall&Status&Erfolgreich \\
 \pagebreak
 \subsection{GBDK Beispiel ROMs / PD ROMs}
 
-Das Gameboy Development Kit (GBDK) ist eine inoffizielle Toolchain zur Entwicklung von Gameboy-Spielen in C. Es enthält einige Beispielprogramme, die zum Testen des Emulators verwendet werden können, da sie meist nur eine bestimmte Funktionalität des Gameboy ausgiebig nutzen.
+Das Gameboy Developer's Kit (GBDK, \cite{gbdk}) ist eine inoffizielle Toolchain zur Entwicklung von Gameboy-Spielen in C. Es enthält einige Beispielprogramme, die zum Testen des Emulators verwendet werden können, da sie meist nur eine bestimmte Funktionalität des Gameboy ausgiebig nutzen.
 
 \begin{figure}[H]
 \centering
@@ -569,6 +610,10 @@ Bei der Entwicklung wurde darauf geachtet, eine korrekte Emulation der oben gena
 
 %Screenshots, bekannte Probleme
 %\section{Ausblick / offene Punkte}
+
+\pagebreak
+\nocite{*}
+\printbibliography
 
 %gbc ...
 \clearpage

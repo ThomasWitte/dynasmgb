@@ -57,12 +57,13 @@ void update_ioregs(gb_state* state) {
     // ly-register 0xff44
     if(state->inst_count > state->ly_count + 114) {
         state->ly_count = state->inst_count;
-        mem[0xff44]++;
-        mem[0xff44] %= 153;
 
         if(mem[0xff44] < 144) {
             update_line(mem);
         }
+
+        mem[0xff44]++;
+        mem[0xff44] %= 153;
 
         if(mem[0xff45] == mem[0xff44]) {
             // Set the coincidence flag
