@@ -74,7 +74,7 @@
 
 \section{Motivation / Emulation}
 
-Der 1989 von Nintendo hergestellte Gameboy ist mit über 100 Millionen verkauften Einheiten eine der erfolgreichsten Spielekonsolen überhaupt.
+Der ab 1989 von Nintendo hergestellte Gameboy ist mit über 100 Millionen verkauften Einheiten eine der erfolgreichsten Spielekonsolen überhaupt.
 
 \begin{wrapfigure}{r}{0.4\textwidth}
 %\begin{figure}[H]
@@ -91,7 +91,7 @@ Aufgrund der inkompatiblen Prozessorarchitekturen kann die Instruktionsfolge des
 
 Die Übersetzung der Instruktionen geschieht meist dynamisch zur Laufzeit, da durch statische Analyse nur schwer -- zB durch verfolgen aller möglichen Ausführungspfade ab einem bekannten Einsprungpunkt -- zwischen Daten und Programmtext unterschieden werden kann. Selbstmodifizierender Code und das Anspringen von zur Laufzeit berechneten Adressen macht bei statischer Übersetzung zusätzlich häufig eine Rückfall auf Interpretation oder dynamische Übersetzung zur Laufzeit notwendig \cite{nes_recompiler}.
 
-Der im Zuge des Projekts entstandene Emulator „dynasmgb“ führt daher eine dynamische Übersetzung der Prozessorinstruktionen aus. Sämtliche anderen Schnittstellen (Grafik, Sound, Speicher) werden jedoch weiterhin vollständig in Software umgesetzt.
+Der im Zuge des Projekts entstandene Emulator „dynasmgb“ führt daher eine dynamische Übersetzung der Prozessorinstruktionen aus. Sämtliche anderen Schnittstellen (Grafik, Sound, Speicher) werden zusätzlich durch Interpretation der Adressraums emuliert.
 
 %Warum ist Emulation notwendig
 %Was muss emuliert werden
@@ -147,13 +147,13 @@ Tritt ein Interrupt auf, so wird er anhängig und ein Bit im Interrupt Flag-Regi
 Über das Interrupt Enable Register (0xFFFF) kann ausgewählt werden, welche Interrupts aktiv sind.
 Das Interrupt Master Enable-Flag kann zusätzlich alle Interrupts abschalten. Es kann durch die Instruktionen DI (Disable Interrupts), EI (Enable Interrupts) oder RETI (Return from Interrupt) manipuliert werden.
 
-Ist ein Interrupt anhängig, das entsprechende Bit im Interrupt Enable Register gesetzt und das Interrupt Master Enable-Flag gesetzt wird eine Handlerfunktion mit fester Startadresse zwischen 0x40 (VBLANK) und 0x60 (Joypad) aufgerufen und mittels des Interrupt Master Enable weitere Interrupts während der Behandlung unterbunden.
+Ist ein Interrupt anhängig, das entsprechende Bit im Interrupt Enable Register und das Interrupt Master Enable-Flag gesetzt, wird eine Handlerfunktion mit fester Startadresse zwischen 0x40 (VBLANK) und 0x60 (Joypad) aufgerufen und mittels des Interrupt Master Enable weitere Interrupts während der Behandlung unterbunden.
 %Interrupts, Startadressen, ...
 \subsection{Adressraum}
 
 \subsubsection{Memory Map}
 
-Der adressierbare Adressraum des Gameboys beträgt 64kB. In die unteren 32kB (0x0 - 0x7FFF) werden zwei Rombänke à 16kB gleichzeitig eingeblendet. Der Wechsel zwischen den Rombänken geschieht durch den MBC innerhalb der Cartridge. Alle verfügbaren MBCs lösen einen Wechsel der oberen Rombank durch Schreibzugriffe auf bestimmte Adressen im ROM aus.
+Der adressierbare Adressraum des Gameboys beträgt 64kB. In die unteren 32kB (0x0 -- 0x7FFF) werden zwei Rombänke à 16kB gleichzeitig eingeblendet. Der Wechsel zwischen den Rombänken geschieht durch den MBC innerhalb der Cartridge. Alle verfügbaren MBCs lösen einen Wechsel der oberen Rombank (0x4000 -- 0x7FFF) durch Schreibzugriffe auf bestimmte Adressen im ROM aus.
 
 \begin{figure}[H]
 \centering
@@ -166,19 +166,19 @@ Die Adressen zwischen 0x8000 und 0x9FFF bilden den Video-RAM. Er enthält $8 \ti
 
 Zwischen 0xA000 und 0xBFFF wird der Cartridge RAM eingeblendet. Je nach MBC lassen sich eventuell mehrere Bänke tauschen. Dieser Speicher ist in einigen Spielcartridges durch eine Batterie versorgt und kann damit auch bei ausgeschaltetem Gameboy einen Spielstand halten.
 
-Es folgen 8kB interner RAM (0xC000 - 0xDFFF), der fast vollständig ein zweites Mal im Adressbereich 0xE000 - 0xFDFF gespiegelt wird. Diese Adressen werden jedoch typischerweise nicht verwendet.
+Es folgen 8kB interner RAM (0xC000 -- 0xDFFF), der fast vollständig ein zweites Mal im Adressbereich 0xE000 -- 0xFDFF gespiegelt wird. Diese Adressen werden jedoch typischerweise nicht verwendet.
 
 Die Adressen 0xFE00 bis 0xFE9F enthalten den OAM Speicher. Er enthält die Position, anzuzeigende Grafik, verwendete Graustufenpalette und Flags aller 40 Sprites. Per DMA-Transfer kann der OAM Speicher nebenläufig überschrieben werden.
 
 Über den Adressbereich 0xFF00 bis 0xFF7F wird der Hardware IO gesteuert. Er enthält Register zur Kontrolle von Timern, Seriellen Übertragungen, DMA-Transfers, Soundausgabe und des anzuzeigenden Mapbereichs.
 
-Im Anschluss befinden sich weitere 127 Byte Arbeitsspeicher (0xFF80 - 0xFFFE), die jederzeit les- und schreibbar sind. Da während eines DMA-Transfers der gesamte sonstige Speicher weder gelesen noch geschrieben werden kann, muss während eines solchen Transfers in diesen Speicherbereich gesprungen werden.
+Im Anschluss befinden sich weitere 127 Byte Arbeitsspeicher (0xFF80 -- 0xFFFE), die jederzeit les- und schreibbar sind. Da während eines DMA-Transfers der gesamte sonstige Speicher weder gelesen noch geschrieben werden kann, muss während eines solchen Transfers in diesen Speicherbereich gesprungen werden.
 
 Das Interrupt Enable Register belegt die höchste Adresse 0xFFFF.
 
 \subsubsection{Startadressen}
 
-Die Ausführung des Programms beginnt an Adresse 0x100. Die Handlerfunktionen mit den Startadressen zwischen 0x00 und 0x60 werden durch Restarts und Interrupts angesprungen. 
+Die Ausführung des Programms beginnt an Adresse 0x100. Die Handlerfunktionen mit Startadressen zwischen 0x00 und 0x60 werden durch Restarts und Interrupts angesprungen. 
 
 \subsubsection{ROM-Header}
 
@@ -336,7 +336,7 @@ Schleifen können am einfachsten an einem Sprung auf die Startadresse des aktuel
 
 Falls im Schleifenrumpf kein lesender oder schreibender Speicherzugriff stattfindet und alle Interrupts mit RET oder RETI zurückkehren, kann die gesamte Schleife atomar ausgeführt werden. Es ist in diesem Fall unerheblich ob ein Interrupt vor, während oder nach der Schleife ausgeführt wird. Gerade einfache Warteschleifen, die eine feste Zahl von Taktzyklen warten, können so beschleunigt werden: der Rücksprung an den Blockanfang wird direkt ausgeführt, ohne zwischenzeitlich die Kontrolle an die Laufzeitumgebung abzugeben und auf Interrupts zu prüfen.
 
-Auch schreibende Speicherzugriffe können meist gefahrlos durchgeführt werden. Ein Interrupthandler kann jedoch in diesem Fall eventuell durch die Schleife beeinflusst werden und sich durch die zusätzlich ausgeführten Schleifeniterationen fehlerhaft verhalten. Lesende Speicherzugriffe bergen dagegen ein erhebliches Risiko: eine Warteschleife, die auf einen Interrupt oder Timer wartet, terminiert eventuell nicht mehr. Da der lesende Zugriff auf Timervariablen und Statusregister meist mit speziellen Instruktionen erfolgt (LDH A, (a8) oder LDH A, (C)), werden in höheren Optimierungsstufen andere lesende Instruktionen in Schleifen erlaubt.
+Auch schreibende Speicherzugriffe können meist gefahrlos durchgeführt werden. Ein Interrupthandler kann jedoch in diesem Fall eventuell durch die Schleife beeinflusst werden und sich durch die zusätzlich ausgeführten Schleifeniterationen fehlerhaft verhalten. Lesende Speicherzugriffe bergen dagegen ein erhebliches Risiko: eine Warteschleife, die auf einen Interrupt oder Timer wartet, terminiert eventuell nicht mehr. Da der lesende Zugriff auf Timer- und Statusregister meist mit speziellen Instruktionen erfolgt (LDH A, (a8) oder LDH A, (C)), werden in höheren Optimierungsstufen andere lesende Instruktionen in Schleifen erlaubt.
 
 Die folgende Schleife führt ein memset auf einem Speicherbereich der Länge BC mit Endadresse HL durch und kann mit obigen Optimierungen unterbrechungsfrei ausgeführt werden:
 
@@ -367,9 +367,9 @@ In der Emulation kann stattdessen eine modifizierte HALT-Instruktion eingefügt 
 %Memory Banking
 \section{Grafik- / Audioausgabe}
 
-Da die Grafikausgabe des Gameboy -- wie beschrieben -- über spezielle Kontrollregister sowie festgelegte Speicherbereiche für Tilemaps erfolgt, muss der Emulator diese Speicherbereiche interpretieren und das entsprechende Bild pixelweise erzeugen. Es reicht nicht, den Speicher zu Beginn der VBLANK-Periode einmalig zu interpretieren und das Bild auszugeben, da viele Spiele Displaytiming ausnutzen um Grafikeffekte zu erzeugen. Sollen diese korrekt dargestellt werden, muss die Erzeugung des Bildes im Emulator ebenso Zeilenweise erfolgen.
+Da die Grafikausgabe des Gameboy -- wie beschrieben -- über spezielle Kontrollregister sowie festgelegte Speicherbereiche für Tilemaps erfolgt, muss der Emulator diese Speicherbereiche interpretieren und das entsprechende Bild pixelweise erzeugen. Es reicht nicht, den Speicher zu Beginn der VBLANK-Periode einmalig zu interpretieren und das Bild auszugeben, da viele Spiele das Displaytiming ausnutzen um Grafikeffekte zu erzeugen. Sollen diese korrekt dargestellt werden, muss die Erzeugung des Bildes im Emulator ebenso Zeilenweise erfolgen.
 
-Nach jedem ausgeführten Instruktionsblock wird im Zuge der Interruptbehandlung auch das LY (ca. alle 450 Taktzyklen) und das LCDC-Register (ca. alle 80, 180, 190 Taktzyklen\footnote{mit jeder bearbeiteten Zeile durchläuft das LCDC-Register drei verschieden lang andauernde Modi.}) aktualisiert. Wird das LY-Register inkrementiert, kann die nächste Bildzeile gezeichnet werden. Nach 144 gezeichneten Zeilen, zu Beginn der VBLANK-Periode, kann schließlich das erzeugte Bild an den Render-Thread zur Anzeige weitergegeben werden. Durch einen separaten Render-Thread wird der Haupt-Thread von der langsamen Aktualisierung der Bildtextur und deren Anzeige entlastet und die Laufzeit des Haupt-Threads pro Frame mehr als halbiert.
+Nach jedem ausgeführten Instruktionsblock wird im Zuge der Interruptbehandlung auch das LY (ca. alle 450 Taktzyklen) und das STAT-Register (ca. alle 80, 180, 190 Taktzyklen\footnote{mit jeder bearbeiteten Zeile durchläuft das STAT-Register drei verschieden lang andauernde Modi.}) aktualisiert. Wird das LY-Register inkrementiert, kann die nächste Bildzeile gezeichnet werden. Nach 144 gezeichneten Zeilen, zu Beginn der VBLANK-Periode, kann schließlich das erzeugte Bild an den Render-Thread zur Anzeige weitergegeben werden. Durch einen separaten Render-Thread wird der Haupt-Thread von der langsamen Aktualisierung der Bildtextur und deren Anzeige entlastet und die Laufzeit des Haupt-Threads pro Frame halbiert.
 
 Der Beginn der VBLANK-Periode wird gleichzeitig zur Limitierung der Geschwindigkeit genutzt: Sind seit dem letzten VBLANK weniger als 1/60s vergangen, wird entsprechend lang gewartet, bevor die Ausführung fortgesetzt wird.
 
@@ -450,14 +450,14 @@ Um Emulationsfehler effektiv zu verfolgen und lokalisieren wurde eine Debuggerko
 
 Mögliche Befehle sind:
 \begin{description}
-\item[backtrace] Gibt den aktuellen Aufrufstack aus. Dabei wird für jeden Stackframe die Startadresse des ersten ausgeführten Blocks ausgegeben. Handelt es sich bei einem Aufruf um einen Interrupt, wird dieser rot darbestellt. Restarts werden dagegen grün dargestellt. Da sich die für den Backtrace nötigen Informationen aufgrund eines möglicherweise von Spiel zu Spiel unterschiedlichen Stacklayouts nicht oder nur schwer aus dem Speicher gewinnen lassen wird parallel zur Ausführung des Spiels bei jeder CALL oder RET Instruktion und Interrupts der Debuggerstack aktualisiert. Einige Spiele manipulieren den Aufrufstack zusätzlich durch andere Instruktionen oder kehren nicht mittels RET aus Funktionen oder Interrupts zurück -- in diesen Fällen sind die angezeigten Informationen fehlerhaft.
-\item[break] Setzt einen Breakpoint für eine Startadresse eines Blocks. Bei einem Sprung auf die angegebene Adresse wird die Debuggerkonsole gestartet. Die Adresse muss dabei genau die Startadresse eines Blocks sein, Adressen innerhalb eines Blocks werden ignoriert. Derzeit wird nur ein einziger Breakpoint unterstützt und bei jedem ausgeführten Block überprüft, ob der Breakpoint erreicht wurde. Eine alternative Implementierung, die den entsprechenden Block so verändert, dass der Debugger gestartet wird und damit eine beliebige Anzahl Breakpoints ohne zusätzlichen Overhead unterstützt, ist bisher noch nicht umgesetzt aber denkbar.
+\item[backtrace] Gibt den aktuellen Aufrufstack aus. Dabei wird für jeden Stackframe die Startadresse des ersten ausgeführten Blocks ausgegeben. Handelt es sich bei einem Aufruf um einen Interrupt, wird dieser rot dargestellt. Restarts werden dagegen grün dargestellt. Da sich die für den Backtrace nötigen Informationen, aufgrund eines möglicherweise von Spiel zu Spiel unterschiedlichen Stacklayouts, nicht oder nur schwer aus dem Speicher gewinnen lassen, wird parallel zur Ausführung des Spiels bei jeder CALL oder RET Instruktion und Interrupts der Debuggerstack aktualisiert. Einige Spiele manipulieren den Aufrufstack zusätzlich durch andere Instruktionen, oder kehren nicht mittels RET aus Funktionen oder Interrupts zurück -- in diesen Fällen sind die angezeigten Informationen fehlerhaft.
+\item[break] Setzt einen Breakpoint für eine Startadresse eines Blocks. Bei einem Sprung auf die angegebene Adresse wird die Debuggerkonsole gestartet. Die Adresse muss dabei genau die Startadresse eines Blocks sein, Adressen innerhalb eines Blocks werden ignoriert. Derzeit wird nur ein einziger Breakpoint unterstützt und bei jedem ausgeführten Block überprüft, ob der Breakpoint erreicht wurde. Eine alternative Implementierung, die den entsprechenden Block so verändert, dass der Debugger gestartet wird und damit eine beliebige Anzahl Breakpoints ohne zusätzlichen Overhead unterstützt, ist bisher noch nicht umgesetzt, aber denkbar.
 \item[call] Ruft eine Funktion an einer bestimmten Speicheradresse auf. Im Unterschied zu einem „set PC \emph{address}“ kann mit einer RET-Instruktion wieder zur aktuellen Adresse zurückgekehrt werden. Ein Aufruf von „call 0x1234“ hat den gleichen Effekt wie „exec CD 34 12“, ohne dass der instruction\_count erhöht wird.
 \item[continue] Verlässt die Debuggerkonsole und setzt das Spiel fort. Die Tastenkombination Strg+D hat den gleichen Effekt.
-\item[exec] Übersetzt und führt eine beliebige Bytefolge aus. Die Bytes werden hexadezimal angegeben und können durch Leerzeichen oder Kommata getrennt werden. Die Bytefolge darf maximal 100 Byte lang sein. Falls die Bytefolge nicht mit einer Sprunginstruktion beendet, die den Block beendet, wird der Block stattdessen automatisch mit einer Sprunginstruktion beendet, die zur aktuellen Adresse zurückkehrt. Die Instruktionsfolge wird wie jeder andere Block, aber ohne Optimierung übersetzt. Die Ausführung beeinflusst insbesondere auch den instruction\_count und damit Timer und Interruptzeitpunkte.
+\item[exec] Übersetzt und führt eine beliebige Bytefolge aus. Die Bytes werden hexadezimal angegeben und können durch Leerzeichen oder Kommata getrennt werden. Die Bytefolge darf maximal 100 Byte lang sein. Falls die Bytefolge nicht mit einer Sprunginstruktion endet, die den Block beendet, wird der Block stattdessen automatisch mit einer Sprunginstruktion abgeschlossen, die zur aktuellen Adresse zurückkehrt. Die Instruktionsfolge wird wie jeder andere Block, aber ohne Optimierung übersetzt. Die Ausführung beeinflusst insbesondere auch den instruction\_count und damit Timer und Interruptzeitpunkte.
 \item[find] Durchsucht den gesamten Adressraum nach der angegebenen Bytefolge. Die Bytes werden hexadezimal angegeben und können durch Leerzeichen oder Kommata getrennt werden. Die Bytefolge darf maximal 20 Byte lang sein. Um die Fundstellen wird ein Kontext von jeweils 10 Byte angezeigt.
 \item[help] Gibt die Abbildung~\ref{img:debugger} dargestellte Hilfe aus.
-\item[meminspect] Öffnet ein zusätzliches „Memory Inspector“ sowie ein „Address Space“-Fenster. Dieses zeigt in der linken Hälfte eine Liveansicht aller schreibenden Schreibzugriffe auf die oberen 32kB des Gameboy Adressraums. In der rechten Hälfte werden unten die Gesamtzahl, sowie die aktuell in den Adressraum eingeblendeten ROM (orange) und RAM-Bänke (türkis) angezeigt. In der rechten oberen Hälfte wird eine Detailansicht der IO-Register zwischen 0xFF00 und 0xFF4F dargestellt (pink). Da nur Schreibzugriffe registriert werden, die den Speicherinhalt verändern und die Ansicht mit jedem VBLANK-Interrupt aktualisiert wird, werden Änderungen an bestimmten IO-Registern (wie zB LY) nicht angezeigt. Das „Memory-Inspector“-Fenster visualisiert die Background Tile Map, sowie die Tile Data Table für beide möglichen Startadressen (0x8000 und 0x8800). Ein weiterer Aufruf von „meminspect“ schließt das Fenster wieder.
+\item[meminspect] Öffnet ein zusätzliches „Memory Inspector“ sowie ein „Address Space“-Fenster. Dieses zeigt in der linken Hälfte eine Liveansicht aller schreibenden Schreibzugriffe auf die oberen 32kB des Gameboy Adressraums. In der rechten Hälfte werden unten die Gesamtzahl, sowie die aktuell in den Adressraum eingeblendeten ROM (orange) und RAM-Bänke (türkis) angezeigt. In der rechten oberen Hälfte wird eine Detailansicht der IO-Register zwischen 0xFF00 und 0xFF4F dargestellt (pink). Da nur Schreibzugriffe registriert werden, die den Speicherinhalt verändern und die Ansicht mit jedem VBLANK-Interrupt aktualisiert wird, werden Änderungen an bestimmten IO-Registern (wie zB LY) nicht angezeigt. Das „Memory-Inspector“-Fenster visualisiert die Background Tile Map, sowie die Tile Data Table für beide möglichen Startadressen (0x8000 und 0x8800). Ein weiterer Aufruf von „meminspect“ schließt die Fenster wieder.
 
 \begin{figure}[htbp]
 \centering
