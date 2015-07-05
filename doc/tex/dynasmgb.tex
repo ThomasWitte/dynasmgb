@@ -608,8 +608,17 @@ Bei der Entwicklung wurde darauf geachtet, eine korrekte Emulation der oben gena
 \caption{Beispiele für andere, größtenteils funktionierende Spiele.}
 \end{figure}
 
+\pagebreak
+
 %Screenshots, bekannte Probleme
-%\section{Ausblick / offene Punkte}
+\section{Fazit}
+Im Rahmen des Projekts wurde ein funktionierender Gameboy-Emulator implementiert. Die Kompatibilität ist derzeit stark eingeschränkt; um sie soweit zu verbessern, dass eine vollständige Funktion aller Spiele erreicht wird, wäre ein erheblicher Aufwand nötig. Zusätzlich müssten einige Optimierungen, wie die verspätete Ausführung von Interrupts oder die Nutzung des Host-Statusregisters fallen gelassen werden.
+
+Das Potential der dynamischen Übersetzung kommt leider aufgrund der sehr hardwarenahen Programmierung der Gameboy-Plattform nur selten zum Tragen, da beispielsweise die Interruptbehandlung einigen Overhead erzeugt. Eine Architektur, die einen Hardwarezugriff nur über eine definierte Betriebssystemschnittstelle zulässt, kann deutlich stärker profitieren.
+
+Das Projekt zeigt dennoch, dass eine dynamische Übersetzung in Verbindung mit dabei durchgeführten Optimierungen auch beim Emulieren der Gameboy-Plattform Potential hat und trotz der dabei kaum erreichbaren hundertprozentigen Genauigkeit, diese ausreicht um viele oder eventuell fast alle Spiele auszuführen.
+
+Die Implementierung hat mir immer viel Spaß gemacht und ich habe einen tiefen Einblick in die Architektur des aus heutiger Sicht archaisch wirkenden Gameboy gewonnen. Ich hoffe, die entstandene Software, sowie diese Dokumentation, wird in Zukunft von Anderen genutzt, um \emph{dynasmgb} entweder zu erweitern, oder ein anderes Projekt auf Basis der gewonnenen Erkenntnisse umzusetzen.
 
 \pagebreak
 \nocite{*}
