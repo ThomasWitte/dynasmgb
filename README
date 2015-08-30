@@ -1,3 +1,17 @@
+= dynasmgb =
+
+dynasmgb ist ein Gameboy-Emulator, der dynasm zur dynasmischen Übersetzung des
+emultierten Programms in x86-64 Code nutzt.
+Die Datei doc/tex/dynasmgb.pdf enthält weitere Informationen.
+
+dynasm ist Teil des LuaJIT Projekts.
+    Licensed under the MIT license.
+    Copyright (C) 2005-2013 Mike Pall. All rights reserved.
+
+gb Snd Emu
+    Licensed under the GNU Lesser General Public License (LGPL).
+    Copyright (C) 2003-2005 Shay Green.
+
 = Installation =
 
 libsdl2 und lua + lua-bitop werden zum Bauen benötigt. Derzeit wird nur Linux
@@ -16,8 +30,6 @@ file.gb ist ein Gameboy ROM; derzeit startet nur Tetris
 
 ESC     Programm beenden
 d       Debugmodus starten/beenden
-s       (im Debugmodus) zum nächsten Block springen
-n       (im Debugmodus) zum nächsten VBLANK-Interrupt (= nächster Frame) springen
 
 a       A
 b       B
